@@ -44,9 +44,11 @@ function mapTelegramUser(
 
 export function resolveTelegramProfile({
   initDataRaw,
+  isTMA,
   timezone,
 }: {
   initDataRaw?: string;
+  isTMA?: boolean;
   timezone?: string | null;
 }) {
   if (initDataRaw) {
@@ -62,7 +64,15 @@ export function resolveTelegramProfile({
   }
 
   if (isProduction()) {
-    throw new Error("Please open wheno from Telegram so we can recognize you.");
+    if (isTMA) {
+      throw new Error(
+        "Telegram opened wheno without Mini App credentials. Launch it from the bot's Menu Button or Web App button.",
+      );
+    }
+
+    throw new Error(
+      "Open wheno from your bot's Mini App button in Telegram, not as a regular link.",
+    );
   }
 
   return getDevTelegramProfile(timezone);

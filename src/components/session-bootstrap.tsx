@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { expandViewport, init, isTMA, miniApp } from "@telegram-apps/sdk";
+import {
+  expandViewport,
+  init,
+  isTMA,
+  miniApp,
+  retrieveRawInitData,
+} from "@telegram-apps/sdk";
 import { useRouter } from "next/navigation";
 
 import { LoadingState } from "@/components/loading-state";
@@ -9,6 +15,26 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 type Status = "loading" | "error";
+
+function getTelegramInitDataRaw() {
+  const webAppInitData = window.Telegram?.WebApp?.initData?.trim();
+
+  if (webAppInitData) {
+    return webAppInitData;
+  }
+
+  try {
+    const sdkInitData = retrieveRawInitData()?.trim();
+
+    if (sdkInitData) {
+      return sdkInitData;
+    }
+  } catch {
+    // Outside Telegram Mini Apps the SDK lookup can throw.
+  }
+
+  return undefined;
+}
 
 export function SessionBootstrap() {
   const router = useRouter();
@@ -38,9 +64,10 @@ export function SessionBootstrap() {
       }
 
       try {
-        const webApp = window.Telegram?.WebApp;
         const timezone =
           Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Amsterdam";
+        const initDataRaw = getTelegramInitDataRaw();
+        const launchedInMiniApp = isTMA();
 
         const response = await fetch("/api/session", {
           method: "POST",
@@ -48,9 +75,9 @@ export function SessionBootstrap() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            initDataRaw: webApp?.initData || undefined,
+            initDataRaw,
             timezone,
-            isTMA: isTMA(),
+            isTMA: launchedInMiniApp,
           }),
         });
 

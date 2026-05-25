@@ -13,10 +13,12 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => ({}))) as {
       initDataRaw?: string;
       timezone?: string;
+      isTMA?: boolean;
     };
 
     const profile = resolveTelegramProfile({
       initDataRaw: body.initDataRaw,
+      isTMA: body.isTMA,
       timezone: body.timezone,
     });
     const user = await upsertTelegramUser(profile);
