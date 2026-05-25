@@ -102,6 +102,12 @@ export interface VoteSummary {
   no: number;
 }
 
+export interface MeetingMemberIdentity {
+  user_id: string;
+  name: string;
+  photo_url: string | null;
+}
+
 export interface MeetingOptionDetail {
   id: string;
   start_at: string;
@@ -109,8 +115,8 @@ export interface MeetingOptionDetail {
   score: number;
   free_user_ids: string[];
   busy_user_ids: string[];
-  free_members: string[];
-  busy_members: string[];
+  free_members: MeetingMemberIdentity[];
+  busy_members: MeetingMemberIdentity[];
   votes: VoteSummary;
   current_user_vote: VoteValue | null;
 }

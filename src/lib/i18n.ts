@@ -138,7 +138,7 @@ export function getTranslations(language: Language) {
       nouns,
       shell: {
         productLabel: "telegram mini app",
-        productDescription: "Договаривайтесь о встрече спокойно и без бесконечного чата.",
+        productDescription: "Планирование встреч внутри Telegram.",
         signedInAs: "вы вошли как",
         themeLabel: "тема",
         languageLabel: "язык",
@@ -365,7 +365,7 @@ export function getTranslations(language: Language) {
     nouns,
     shell: {
       productLabel: "telegram mini app",
-      productDescription: "Plan the meetup calmly, without the endless chat spiral.",
+      productDescription: "Shared scheduling inside Telegram.",
       signedInAs: "signed in as",
       themeLabel: "theme",
       languageLabel: "language",
@@ -410,7 +410,7 @@ export function getTranslations(language: Language) {
       splashDescription: "We'll connect your Telegram profile, then load your groups.",
       title: "Your groups",
       description:
-        "Create a group, share the invite, add busy times, and let wheno suggest the best slots.",
+        "Create a group, collect busy times, and choose a slot together.",
       createGroup: "Create group",
       joinGroup: "Join group",
       emptyTitle: "No groups yet",
@@ -490,7 +490,7 @@ export function getTranslations(language: Language) {
       loadingTitle: "Loading meeting request",
       splashDescription: "We'll connect your Telegram session, then load the meeting options.",
       description:
-        "Vote on the options you like, or lock in the final slot if you own the group.",
+          "Vote on the best slots, then lock the final one if you own the group.",
       noOptionsTitle: "No meeting options yet",
       noOptionsDescription: "There are no candidate slots on this meeting request yet.",
       summary: (range: string, duration: number, participants: number) =>

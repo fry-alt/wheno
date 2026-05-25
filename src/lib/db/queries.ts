@@ -10,6 +10,7 @@ import type {
   GroupListItem,
   GroupMemberSummary,
   MeetingDetail,
+  MeetingMemberIdentity,
   MeetingOptionDetail,
   MeetingRequestSummary,
   PreferredTime,
@@ -639,8 +640,15 @@ export async function getMeetingDetailForUser(meetingId: string, userId: string)
     throw appError("meeting.votesLoadFailed");
   }
 
-  const memberNames = new Map(
-    groupDetail.members.map((member) => [member.user_id, getDisplayName(member)]),
+  const memberDirectory = new Map(
+    groupDetail.members.map((member) => [
+      member.user_id,
+      {
+        user_id: member.user_id,
+        name: getDisplayName(member),
+        photo_url: member.photo_url,
+      } satisfies MeetingMemberIdentity,
+    ]),
   );
   const votesByOption = new Map<string, VoteSummary>();
   const currentVoteByOption = new Map<string, VoteValue | null>();
@@ -673,8 +681,22 @@ export async function getMeetingDetailForUser(meetingId: string, userId: string)
         score: option.score,
         free_user_ids: option.free_user_ids,
         busy_user_ids: option.busy_user_ids,
-        free_members: option.free_user_ids.map((id) => memberNames.get(id) ?? "Unknown"),
-        busy_members: option.busy_user_ids.map((id) => memberNames.get(id) ?? "Unknown"),
+        free_members: option.free_user_ids.map(
+          (id) =>
+            memberDirectory.get(id) ?? {
+              user_id: id,
+              name: "Unknown",
+              photo_url: null,
+            },
+        ),
+        busy_members: option.busy_user_ids.map(
+          (id) =>
+            memberDirectory.get(id) ?? {
+              user_id: id,
+              name: "Unknown",
+              photo_url: null,
+            },
+        ),
         votes: votesByOption.get(option.id) ?? {
           yes: 0,
           maybe: 0,

@@ -64,7 +64,7 @@ export function PreferenceControls({
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-wrap gap-2">
       <PreferenceGroup label={labels.themeLabel}>
         <PreferenceButton
           active={activeTheme === "light"}
@@ -102,11 +102,11 @@ function PreferenceGroup({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-[22px] border border-border/70 bg-card-muted/80 p-2">
-      <p className="px-2 pb-2 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-muted">
+    <div className="flex items-center gap-2 rounded-full border border-white/14 bg-white/8 p-1 pr-2 text-background">
+      <p className="px-2 text-[0.64rem] font-semibold uppercase tracking-[0.22em] text-white/55">
         {label}
       </p>
-      <div className="grid grid-cols-2 gap-2">{children}</div>
+      <div className="flex gap-1">{children}</div>
     </div>
   );
 }
@@ -124,10 +124,10 @@ function PreferenceButton({
     <button
       aria-pressed={active}
       className={cn(
-        "h-10 rounded-2xl px-3 text-sm font-semibold transition",
+        "h-9 rounded-full px-3 text-sm font-semibold transition",
         active
-          ? "bg-foreground text-background shadow-[0_18px_40px_-24px_rgba(8,20,39,0.75)]"
-          : "bg-transparent text-muted hover:bg-background/70 hover:text-foreground",
+          ? "bg-white text-slate-950 shadow-[0_16px_28px_-20px_rgba(255,255,255,0.7)]"
+          : "bg-transparent text-white/68 hover:bg-white/10 hover:text-white",
       )}
       onClick={onClick}
       type="button"

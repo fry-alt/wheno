@@ -1,4 +1,5 @@
 import { selectMeetingOptionAction, voteMeetingOptionAction } from "@/lib/actions";
+import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatSlotDateTime } from "@/lib/datetime";
@@ -31,6 +32,20 @@ export function MeetingOptionCard({
     maybe: copy.common.maybe,
     no: copy.common.no,
   };
+  const voteButtonStyles: Record<VoteValue, { active: string; idle: string }> = {
+    yes: {
+      active: "bg-emerald-600 text-white ring-emerald-600 shadow-[0_16px_28px_-18px_rgba(5,150,105,0.45)]",
+      idle: "text-emerald-700 ring-emerald-200 hover:bg-emerald-50 dark:text-emerald-300 dark:ring-emerald-500/25 dark:hover:bg-emerald-500/10",
+    },
+    maybe: {
+      active: "bg-amber-500 text-slate-950 ring-amber-500 shadow-[0_16px_28px_-18px_rgba(245,158,11,0.45)]",
+      idle: "text-amber-700 ring-amber-200 hover:bg-amber-50 dark:text-amber-300 dark:ring-amber-500/25 dark:hover:bg-amber-500/10",
+    },
+    no: {
+      active: "bg-rose-500 text-white ring-rose-500 shadow-[0_16px_28px_-18px_rgba(244,63,94,0.42)]",
+      idle: "text-rose-700 ring-rose-200 hover:bg-rose-50 dark:text-rose-300 dark:ring-rose-500/25 dark:hover:bg-rose-500/10",
+    },
+  };
 
   return (
     <Card
@@ -59,17 +74,41 @@ export function MeetingOptionCard({
           <p className="font-semibold text-foreground">
             {copy.nouns.freeMembers(option.free_members.length)}
           </p>
-          <p className="mt-1 leading-6">
-            {option.free_members.length ? option.free_members.join(", ") : copy.common.noOneFree}
-          </p>
+          {option.free_members.length ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {option.free_members.map((member) => (
+                <span
+                  className="inline-flex items-center gap-2 rounded-full bg-card px-2.5 py-1.5 ring-1 ring-border/70"
+                  key={member.user_id}
+                >
+                  <Avatar label={member.name} size="xs" src={member.photo_url} />
+                  <span className="text-xs font-medium text-foreground">{member.name}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 leading-6">{copy.common.noOneFree}</p>
+          )}
         </div>
         <div>
           <p className="font-semibold text-foreground">
             {copy.nouns.busyMembers(option.busy_members.length)}
           </p>
-          <p className="mt-1 leading-6">
-            {option.busy_members.length ? option.busy_members.join(", ") : copy.common.everyoneFree}
-          </p>
+          {option.busy_members.length ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {option.busy_members.map((member) => (
+                <span
+                  className="inline-flex items-center gap-2 rounded-full bg-card px-2.5 py-1.5 ring-1 ring-border/70"
+                  key={member.user_id}
+                >
+                  <Avatar label={member.name} size="xs" src={member.photo_url} />
+                  <span className="text-xs font-medium text-foreground">{member.name}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 leading-6">{copy.common.everyoneFree}</p>
+          )}
         </div>
       </div>
 
@@ -82,7 +121,15 @@ export function MeetingOptionCard({
               <input name="meetingId" type="hidden" value={meetingId} />
               <input name="optionId" type="hidden" value={option.id} />
               <input name="vote" type="hidden" value={vote} />
-              <Button size="sm" variant={isActive ? "primary" : "secondary"} type="submit">
+              <Button
+                className={cn(
+                  "ring-1",
+                  isActive ? voteButtonStyles[vote].active : voteButtonStyles[vote].idle,
+                )}
+                size="sm"
+                type="submit"
+                variant="ghost"
+              >
                 {voteLabels[vote]}
               </Button>
             </form>
