@@ -1,0 +1,774 @@
+import { randomInt } from "node:crypto";
+
+import { getAdminSupabase } from "@/lib/supabase/admin";
+import { getDateRangeUtc, toUtcDateFromLocalParts } from "@/lib/datetime";
+import { calculateMeetingOptions } from "@/lib/scheduler";
+import type {
+  AppUser,
+  GroupDetail,
+  GroupListItem,
+  GroupMemberSummary,
+  MeetingDetail,
+  MeetingOptionDetail,
+  MeetingRequestSummary,
+  PreferredTime,
+  SchedulerBusyBlock,
+  SchedulerMember,
+  TelegramProfile,
+  VoteSummary,
+  VoteValue,
+} from "@/lib/types";
+import { getDisplayName } from "@/lib/utils";
+
+const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function unwrapRelation<T>(value: T | T[] | null | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function buildInviteCode(length = 6) {
+  return Array.from({ length }, () =>
+    INVITE_CODE_ALPHABET[randomInt(0, INVITE_CODE_ALPHABET.length)],
+  ).join("");
+}
+
+function isUniqueViolation(code?: string | null) {
+  return code === "23505";
+}
+
+function assertSupabaseResult<T>(data: T | null, errorMessage: string) {
+  if (!data) {
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}
+
+export async function getUserById(userId: string) {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin.from("users").select("*").eq("id", userId).maybeSingle();
+
+  if (error) {
+    throw new Error("We could not load your profile right now.");
+  }
+
+  return (data as AppUser | null) ?? null;
+}
+
+export async function upsertTelegramUser(profile: TelegramProfile) {
+  const admin = getAdminSupabase();
+  const now = new Date().toISOString();
+
+  const { data, error } = await admin
+    .from("users")
+    .upsert(
+      {
+        telegram_id: profile.telegramId,
+        first_name: profile.firstName,
+        last_name: profile.lastName,
+        username: profile.username,
+        photo_url: profile.photoUrl,
+        timezone: profile.timezone,
+        updated_at: now,
+      },
+      { onConflict: "telegram_id" },
+    )
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error("We could not save your Telegram profile yet.");
+  }
+
+  return data as AppUser;
+}
+
+export async function getGroupsForUser(userId: string) {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("group_members")
+    .select(
+      `
+        role,
+        group:groups (
+          id,
+          name,
+          owner_id,
+          invite_code,
+          created_at
+        )
+      `,
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error("We could not load your groups right now.");
+  }
+
+  const memberships = ((data ?? []) as unknown as Array<{
+    role: GroupListItem["role"];
+    group:
+      | Omit<GroupListItem, "role" | "member_count" | "open_meeting_count">
+      | Array<Omit<GroupListItem, "role" | "member_count" | "open_meeting_count">>
+      | null;
+  }>)
+    .map((entry) => ({
+      ...entry,
+      group: unwrapRelation(entry.group),
+    }))
+    .filter((entry) => entry.group);
+
+  const groupIds = memberships.map((entry) => entry.group!.id);
+
+  if (!groupIds.length) {
+    return [] as GroupListItem[];
+  }
+
+  const [{ data: members }, { data: meetings }] = await Promise.all([
+    admin.from("group_members").select("group_id").in("group_id", groupIds),
+    admin
+      .from("meeting_requests")
+      .select("group_id")
+      .in("group_id", groupIds)
+      .eq("status", "open"),
+  ]);
+
+  const memberCounts = new Map<string, number>();
+  const meetingCounts = new Map<string, number>();
+
+  for (const row of members ?? []) {
+    memberCounts.set(row.group_id as string, (memberCounts.get(row.group_id as string) ?? 0) + 1);
+  }
+
+  for (const row of meetings ?? []) {
+    meetingCounts.set(
+      row.group_id as string,
+      (meetingCounts.get(row.group_id as string) ?? 0) + 1,
+    );
+  }
+
+  return memberships.map((membership) => ({
+    ...membership.group!,
+    role: membership.role,
+    member_count: memberCounts.get(membership.group!.id) ?? 0,
+    open_meeting_count: meetingCounts.get(membership.group!.id) ?? 0,
+  }));
+}
+
+async function getGroupAccess(groupId: string, userId: string) {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("group_members")
+    .select(
+      `
+        role,
+        group:groups (
+          id,
+          name,
+          owner_id,
+          invite_code,
+          created_at
+        )
+      `,
+    )
+    .eq("group_id", groupId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("We could not load this group right now.");
+  }
+
+  return ((data as unknown) as
+    | {
+        role: GroupListItem["role"];
+        group:
+          | Omit<GroupDetail, "members" | "meeting_requests">
+          | Array<Omit<GroupDetail, "members" | "meeting_requests">>
+          | null;
+      }
+    | null)
+    ? {
+        ...(data as unknown as {
+          role: GroupListItem["role"];
+          group:
+            | Omit<GroupDetail, "members" | "meeting_requests">
+            | Array<Omit<GroupDetail, "members" | "meeting_requests">>
+            | null;
+        }),
+        group: unwrapRelation(
+          (data as unknown as {
+            group:
+              | Omit<GroupDetail, "members" | "meeting_requests">
+              | Array<Omit<GroupDetail, "members" | "meeting_requests">>
+              | null;
+          }).group,
+        ),
+      }
+    : null;
+}
+
+export async function getGroupMembers(groupId: string) {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("group_members")
+    .select(
+      `
+        id,
+        role,
+        user:users (
+          id,
+          first_name,
+          last_name,
+          username,
+          photo_url,
+          timezone
+        )
+      `,
+    )
+    .eq("group_id", groupId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error("We could not load the group members yet.");
+  }
+
+  return ((data ?? []) as unknown as Array<{
+    id: string;
+    role: GroupMemberSummary["role"];
+    user: {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      username: string | null;
+      photo_url: string | null;
+      timezone: string;
+    } | Array<{
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      username: string | null;
+      photo_url: string | null;
+      timezone: string;
+    }> | null;
+  }>)
+    .map((row) => ({
+      ...row,
+      user: unwrapRelation(row.user),
+    }))
+    .filter((row) => row.user)
+    .map((row) => ({
+      membership_id: row.id,
+      role: row.role,
+      user_id: row.user!.id,
+      first_name: row.user!.first_name,
+      last_name: row.user!.last_name,
+      username: row.user!.username,
+      photo_url: row.user!.photo_url,
+      timezone: row.user!.timezone,
+    }));
+}
+
+export async function getMeetingRequestSummaries(groupId: string) {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("meeting_requests")
+    .select("*")
+    .eq("group_id", groupId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error("We could not load the meeting requests yet.");
+  }
+
+  return (data ?? []) as MeetingRequestSummary[];
+}
+
+export async function getGroupDetailForUser(groupId: string, userId: string) {
+  const access = await getGroupAccess(groupId, userId);
+
+  if (!access?.group) {
+    return null;
+  }
+
+  const [members, meetingRequests] = await Promise.all([
+    getGroupMembers(groupId),
+    getMeetingRequestSummaries(groupId),
+  ]);
+
+  return {
+    ...access.group,
+    members,
+    meeting_requests: meetingRequests,
+  } satisfies GroupDetail;
+}
+
+export async function createGroupForUser(userId: string, name: string) {
+  const admin = getAdminSupabase();
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    throw new Error("Please give your group a name.");
+  }
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const inviteCode = buildInviteCode();
+    const { data, error } = await admin
+      .from("groups")
+      .insert({
+        name: trimmedName,
+        owner_id: userId,
+        invite_code: inviteCode,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      if (isUniqueViolation(error.code)) {
+        continue;
+      }
+
+      throw new Error("We could not create your group yet.");
+    }
+
+    const group = assertSupabaseResult(data, "We could not create your group yet.");
+    const { error: memberError } = await admin.from("group_members").insert({
+      group_id: group.id,
+      user_id: userId,
+      role: "owner",
+    });
+
+    if (memberError) {
+      throw new Error("The group was created, but we could not add you as the owner.");
+    }
+
+    return group.id as string;
+  }
+
+  throw new Error("We could not generate an invite code right now. Please try again.");
+}
+
+export async function joinGroupByInviteCode(userId: string, inviteCode: string) {
+  const admin = getAdminSupabase();
+  const normalizedCode = inviteCode.trim().toUpperCase();
+
+  if (!normalizedCode) {
+    throw new Error("Please enter an invite code.");
+  }
+
+  const { data: group, error: groupError } = await admin
+    .from("groups")
+    .select("id")
+    .eq("invite_code", normalizedCode)
+    .maybeSingle();
+
+  if (groupError) {
+    throw new Error("We could not check that invite code yet.");
+  }
+
+  if (!group) {
+    throw new Error("That invite code doesn't match any group.");
+  }
+
+  const { error: memberError } = await admin.from("group_members").insert({
+    group_id: group.id,
+    user_id: userId,
+    role: "member",
+  });
+
+  if (memberError && !isUniqueViolation(memberError.code)) {
+    throw new Error("We could not join that group yet.");
+  }
+
+  return group.id as string;
+}
+
+export async function createBusyBlockForUser({
+  userId,
+  title,
+  date,
+  startTime,
+  endTime,
+  timezone,
+}: {
+  userId: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  timezone: string;
+}) {
+  const admin = getAdminSupabase();
+  const trimmedTitle = title.trim();
+
+  if (!trimmedTitle) {
+    throw new Error("Please name this busy block.");
+  }
+
+  const startAt = toUtcDateFromLocalParts(date, startTime, timezone);
+  const endAt = toUtcDateFromLocalParts(date, endTime, timezone);
+
+  if (endAt <= startAt) {
+    throw new Error("End time needs to be after the start time.");
+  }
+
+  const { error } = await admin.from("busy_blocks").insert({
+    user_id: userId,
+    title: trimmedTitle,
+    start_at: startAt.toISOString(),
+    end_at: endAt.toISOString(),
+    source: "manual",
+  });
+
+  if (error) {
+    throw new Error("We could not save that busy block yet.");
+  }
+}
+
+export async function createMeetingRequestWithOptions({
+  groupId,
+  userId,
+  title,
+  dateFrom,
+  dateTo,
+  durationMinutes,
+  preferredTime,
+  minParticipants,
+  timezone,
+}: {
+  groupId: string;
+  userId: string;
+  title: string;
+  dateFrom: string;
+  dateTo: string;
+  durationMinutes: number;
+  preferredTime: PreferredTime;
+  minParticipants: number;
+  timezone: string;
+}) {
+  const admin = getAdminSupabase();
+  const groupDetail = await getGroupDetailForUser(groupId, userId);
+
+  if (!groupDetail) {
+    throw new Error("We could not find that group.");
+  }
+
+  if (groupDetail.owner_id !== userId) {
+    throw new Error("Only the group owner can create a meeting request.");
+  }
+
+  if (!title.trim()) {
+    throw new Error("Please give the meeting request a title.");
+  }
+
+  if (dateTo < dateFrom) {
+    throw new Error("The end date needs to come after the start date.");
+  }
+
+  if (durationMinutes <= 0) {
+    throw new Error("Pick a meeting length longer than zero minutes.");
+  }
+
+  if (minParticipants > groupDetail.members.length) {
+    throw new Error("Minimum participants cannot be greater than your member count.");
+  }
+
+  const { data: request, error: requestError } = await admin
+    .from("meeting_requests")
+    .insert({
+      group_id: groupId,
+      created_by: userId,
+      title: title.trim(),
+      date_from: dateFrom,
+      date_to: dateTo,
+      duration_minutes: durationMinutes,
+      preferred_time: preferredTime,
+      min_participants: minParticipants,
+      status: "open",
+    })
+    .select("id")
+    .single();
+
+  if (requestError) {
+    throw new Error("We could not create the meeting request yet.");
+  }
+
+  const meetingRequestId = String(request.id);
+
+  const { start, end } = getDateRangeUtc(dateFrom, dateTo, timezone);
+  const memberIds = groupDetail.members.map((member) => member.user_id);
+
+  const { data: busyRows, error: busyError } = await admin
+    .from("busy_blocks")
+    .select("id, user_id, title, start_at, end_at")
+    .in("user_id", memberIds)
+    .lt("start_at", end.toISOString())
+    .gt("end_at", start.toISOString());
+
+  if (busyError) {
+    throw new Error("We could not load the group's busy blocks yet.");
+  }
+
+  const options = calculateMeetingOptions({
+    members: groupDetail.members.map(
+      (member) =>
+        ({
+          userId: member.user_id,
+        }) satisfies SchedulerMember,
+    ),
+    busyBlocks: ((busyRows ?? []) as Array<{
+      id: string;
+      user_id: string;
+      title: string;
+      start_at: string;
+      end_at: string;
+    }>).map(
+      (busyBlock) =>
+        ({
+          id: busyBlock.id,
+          userId: busyBlock.user_id,
+          title: busyBlock.title,
+          startAt: busyBlock.start_at,
+          endAt: busyBlock.end_at,
+        }) satisfies SchedulerBusyBlock,
+    ),
+    dateFrom,
+    dateTo,
+    durationMinutes,
+    preferredTime,
+    minParticipants,
+    timezone,
+  });
+
+  if (!options.length) {
+    await admin.from("meeting_requests").delete().eq("id", meetingRequestId);
+    throw new Error("No available slots found for that request. Try a wider range or fewer people.");
+  }
+
+  const { error: optionsError } = await admin.from("meeting_options").insert(
+    options.map((option) => ({
+      meeting_request_id: meetingRequestId,
+      start_at: option.startAt,
+      end_at: option.endAt,
+      score: option.score,
+      free_user_ids: option.freeUserIds,
+      busy_user_ids: option.busyUserIds,
+    })),
+  );
+
+  if (optionsError) {
+    throw new Error("We found slots, but could not save them yet.");
+  }
+
+  return meetingRequestId;
+}
+
+export async function getMeetingDetailForUser(meetingId: string, userId: string) {
+  const admin = getAdminSupabase();
+  const { data: meeting, error: meetingError } = await admin
+    .from("meeting_requests")
+    .select("*")
+    .eq("id", meetingId)
+    .maybeSingle();
+
+  if (meetingError) {
+    throw new Error("We could not load that meeting request right now.");
+  }
+
+  if (!meeting) {
+    return null;
+  }
+
+  const meetingRow = meeting as {
+    id: string;
+    group_id: string;
+    title: string;
+    date_from: string;
+    date_to: string;
+    duration_minutes: number;
+    preferred_time: PreferredTime;
+    min_participants: number;
+    status: MeetingDetail["status"];
+    selected_option_id: string | null;
+  };
+
+  const groupDetail = await getGroupDetailForUser(meetingRow.group_id, userId);
+
+  if (!groupDetail) {
+    return null;
+  }
+
+  const { data: options, error: optionsError } = await admin
+    .from("meeting_options")
+    .select("*")
+    .eq("meeting_request_id", meetingId)
+    .order("score", { ascending: false })
+    .order("start_at", { ascending: true });
+
+  if (optionsError) {
+    throw new Error("We could not load the meeting options yet.");
+  }
+
+  const optionRows = (options ?? []) as Array<{
+    id: string;
+    start_at: string;
+    end_at: string;
+    score: number;
+    free_user_ids: string[];
+    busy_user_ids: string[];
+  }>;
+  const optionIds = optionRows.map((option) => option.id);
+  const { data: votes, error: votesError } = optionIds.length
+    ? await admin.from("votes").select("option_id, user_id, vote").in("option_id", optionIds)
+    : { data: [], error: null };
+
+  if (votesError) {
+    throw new Error("We could not load the votes yet.");
+  }
+
+  const memberNames = new Map(
+    groupDetail.members.map((member) => [member.user_id, getDisplayName(member)]),
+  );
+  const votesByOption = new Map<string, VoteSummary>();
+  const currentVoteByOption = new Map<string, VoteValue | null>();
+
+  for (const vote of (votes ?? []) as Array<{
+    option_id: string;
+    user_id: string;
+    vote: VoteValue;
+  }>) {
+    const summary = votesByOption.get(vote.option_id) ?? {
+      yes: 0,
+      maybe: 0,
+      no: 0,
+    };
+
+    summary[vote.vote] += 1;
+    votesByOption.set(vote.option_id, summary);
+
+    if (vote.user_id === userId) {
+      currentVoteByOption.set(vote.option_id, vote.vote);
+    }
+  }
+
+  const mappedOptions = optionRows.map(
+    (option) =>
+      ({
+        id: option.id,
+        start_at: option.start_at,
+        end_at: option.end_at,
+        score: option.score,
+        free_user_ids: option.free_user_ids,
+        busy_user_ids: option.busy_user_ids,
+        free_members: option.free_user_ids.map((id) => memberNames.get(id) ?? "Unknown"),
+        busy_members: option.busy_user_ids.map((id) => memberNames.get(id) ?? "Unknown"),
+        votes: votesByOption.get(option.id) ?? {
+          yes: 0,
+          maybe: 0,
+          no: 0,
+        },
+        current_user_vote: currentVoteByOption.get(option.id) ?? null,
+      }) satisfies MeetingOptionDetail,
+  );
+
+  return {
+    id: meetingRow.id,
+    group_id: meetingRow.group_id,
+    group_name: groupDetail.name,
+    group_owner_id: groupDetail.owner_id,
+    title: meetingRow.title,
+    date_from: meetingRow.date_from,
+    date_to: meetingRow.date_to,
+    duration_minutes: meetingRow.duration_minutes,
+    preferred_time: meetingRow.preferred_time,
+    min_participants: meetingRow.min_participants,
+    status: meetingRow.status,
+    selected_option_id: meetingRow.selected_option_id,
+    member_count: groupDetail.members.length,
+    options: mappedOptions,
+  } satisfies MeetingDetail;
+}
+
+async function getMeetingForMemberAction(meetingId: string, userId: string) {
+  const detail = await getMeetingDetailForUser(meetingId, userId);
+
+  if (!detail) {
+    throw new Error("We could not find that meeting request.");
+  }
+
+  return detail;
+}
+
+export async function saveVoteForOption({
+  meetingId,
+  optionId,
+  userId,
+  vote,
+}: {
+  meetingId: string;
+  optionId: string;
+  userId: string;
+  vote: VoteValue;
+}) {
+  const admin = getAdminSupabase();
+  const meeting = await getMeetingForMemberAction(meetingId, userId);
+
+  const option = meeting.options.find((item) => item.id === optionId);
+
+  if (!option) {
+    throw new Error("That meeting option doesn't exist anymore.");
+  }
+
+  const { error } = await admin.from("votes").upsert(
+    {
+      option_id: optionId,
+      user_id: userId,
+      vote,
+    },
+    { onConflict: "option_id,user_id" },
+  );
+
+  if (error) {
+    throw new Error("We could not save your vote yet.");
+  }
+}
+
+export async function selectMeetingOptionForOwner({
+  meetingId,
+  optionId,
+  userId,
+}: {
+  meetingId: string;
+  optionId: string;
+  userId: string;
+}) {
+  const admin = getAdminSupabase();
+  const meeting = await getMeetingForMemberAction(meetingId, userId);
+
+  if (meeting.group_owner_id !== userId) {
+    throw new Error("Only the group owner can select the final slot.");
+  }
+
+  const option = meeting.options.find((item) => item.id === optionId);
+
+  if (!option) {
+    throw new Error("That meeting option doesn't exist anymore.");
+  }
+
+  const { error } = await admin
+    .from("meeting_requests")
+    .update({
+      status: "selected",
+      selected_option_id: optionId,
+    })
+    .eq("id", meetingId);
+
+  if (error) {
+    throw new Error("We could not lock in that meeting time yet.");
+  }
+}

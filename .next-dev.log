@@ -1,0 +1,23 @@
+
+> wheno@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.8.1.3:3000
+- Environments: .env
+✓ Ready in 789ms
+
+ GET / 200 in 616ms (next.js: 250ms, application-code: 366ms)
+ GET / 200 in 76ms (next.js: 8ms, application-code: 68ms)
+ GET / 200 in 144ms (next.js: 4ms, application-code: 140ms)
+ POST /api/session 400 in 1896ms (next.js: 804ms, application-code: 1091ms)
+ GET / 200 in 80ms (next.js: 9ms, application-code: 71ms)
+ POST /api/session 400 in 740ms (next.js: 3ms, application-code: 737ms)
+ POST /api/session 400 in 615ms (next.js: 5ms, application-code: 609ms)
+ POST /api/session 400 in 446ms (next.js: 3ms, application-code: 443ms)
+ GET / 200 in 844ms (next.js: 165ms, application-code: 678ms)
+ GET / 200 in 415ms (next.js: 23ms, application-code: 392ms)
+ POST /api/session 400 in 933ms (next.js: 39ms, application-code: 894ms)
+ GET / 200 in 373ms (next.js: 19ms, application-code: 355ms)
+ POST /api/session 400 in 385ms (next.js: 19ms, application-code: 366ms)
