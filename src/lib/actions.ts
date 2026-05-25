@@ -12,6 +12,8 @@ import {
   saveVoteForOption,
   selectMeetingOptionForOwner,
 } from "@/lib/db/queries";
+import { getLocalizedErrorMessage } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import type { PreferredTime, VoteValue } from "@/lib/types";
 import { createErrorRedirect } from "@/lib/utils";
 
@@ -30,6 +32,7 @@ function redirectWithError(pathname: string, params: Record<string, string | und
 
 export async function createGroupAction(formData: FormData) {
   const user = await requireCurrentUser();
+  const { language } = await getUiPreferences();
   const name = getString(formData, "name");
 
   try {
@@ -37,8 +40,7 @@ export async function createGroupAction(formData: FormData) {
     revalidatePath("/");
     redirect(`/groups/${groupId}`);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "We could not create your group yet.";
+    const message = getLocalizedErrorMessage(error, language, "group.createFailed");
 
     redirectWithError("/groups/new", { error: message });
   }
@@ -46,6 +48,7 @@ export async function createGroupAction(formData: FormData) {
 
 export async function joinGroupAction(formData: FormData) {
   const user = await requireCurrentUser();
+  const { language } = await getUiPreferences();
   const inviteCode = getString(formData, "inviteCode");
 
   try {
@@ -53,8 +56,7 @@ export async function joinGroupAction(formData: FormData) {
     revalidatePath("/");
     redirect(`/groups/${groupId}`);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "We could not join that group yet.";
+    const message = getLocalizedErrorMessage(error, language, "group.joinFailed");
 
     redirectWithError("/join", {
       code: inviteCode.toUpperCase(),
@@ -65,6 +67,7 @@ export async function joinGroupAction(formData: FormData) {
 
 export async function createBusyBlockAction(formData: FormData) {
   const user = await requireCurrentUser();
+  const { language } = await getUiPreferences();
   const groupId = getString(formData, "groupId");
   const returnPath = groupId ? `/groups/${groupId}` : "/";
 
@@ -81,8 +84,7 @@ export async function createBusyBlockAction(formData: FormData) {
     revalidatePath(returnPath);
     redirect(returnPath);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "We could not save that busy block yet.";
+    const message = getLocalizedErrorMessage(error, language, "busyBlock.saveFailed");
 
     redirectWithError("/availability/new", {
       groupId,
@@ -93,6 +95,7 @@ export async function createBusyBlockAction(formData: FormData) {
 
 export async function createMeetingRequestAction(formData: FormData) {
   const user = await requireCurrentUser();
+  const { language } = await getUiPreferences();
   const groupId = getString(formData, "groupId");
   const durationMinutes = getPositiveInteger(formData, "durationMinutes");
   const minParticipants = getPositiveInteger(formData, "minParticipants");
@@ -113,10 +116,7 @@ export async function createMeetingRequestAction(formData: FormData) {
     revalidatePath(`/groups/${groupId}`);
     redirect(`/meetings/${meetingId}`);
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "We could not create the meeting request yet.";
+    const message = getLocalizedErrorMessage(error, language, "meeting.createFailed");
 
     redirectWithError(`/groups/${groupId}/find-time`, { error: message });
   }
@@ -124,6 +124,7 @@ export async function createMeetingRequestAction(formData: FormData) {
 
 export async function voteMeetingOptionAction(formData: FormData) {
   const user = await requireCurrentUser();
+  const { language } = await getUiPreferences();
   const meetingId = getString(formData, "meetingId");
 
   try {
@@ -137,8 +138,7 @@ export async function voteMeetingOptionAction(formData: FormData) {
     revalidatePath(`/meetings/${meetingId}`);
     redirect(`/meetings/${meetingId}`);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "We could not save your vote yet.";
+    const message = getLocalizedErrorMessage(error, language, "meeting.voteSaveFailed");
 
     redirectWithError(`/meetings/${meetingId}`, { error: message });
   }
@@ -146,6 +146,7 @@ export async function voteMeetingOptionAction(formData: FormData) {
 
 export async function selectMeetingOptionAction(formData: FormData) {
   const user = await requireCurrentUser();
+  const { language } = await getUiPreferences();
   const meetingId = getString(formData, "meetingId");
 
   try {
@@ -158,10 +159,7 @@ export async function selectMeetingOptionAction(formData: FormData) {
     revalidatePath(`/meetings/${meetingId}`);
     redirect(`/meetings/${meetingId}`);
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "We could not select that meeting time yet.";
+    const message = getLocalizedErrorMessage(error, language, "meeting.selectFailed");
 
     redirectWithError(`/meetings/${meetingId}`, { error: message });
   }

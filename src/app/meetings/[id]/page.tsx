@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 import { getMeetingDetailForUser } from "@/lib/db/queries";
 import { formatDateWindow } from "@/lib/datetime";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import { decodeSearchMessage, readSearchParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -24,14 +26,18 @@ export default async function MeetingDetailPage({
   const [{ id }, rawSearchParams] = await Promise.all([params, searchParams]);
   const error = decodeSearchMessage(readSearchParam(rawSearchParams.error));
   const user = await getCurrentUser();
+  const { language, theme } = await getUiPreferences();
+  const copy = getTranslations(language);
 
   if (!user) {
     return (
       <AppShell
-        description="We'll connect your Telegram session, then load the meeting options."
-        title="Loading meeting request"
+        description={copy.meeting.splashDescription}
+        language={language}
+        theme={theme}
+        title={copy.meeting.loadingTitle}
       >
-        <SessionBootstrap />
+        <SessionBootstrap language={language} />
       </AppShell>
     );
   }
@@ -46,30 +52,34 @@ export default async function MeetingDetailPage({
 
   return (
     <AppShell
-      description="Vote on the options you like, or lock in the final slot if you own the group."
+      description={copy.meeting.description}
+      language={language}
+      theme={theme}
       title={meeting.title}
       user={user}
     >
       {error ? (
-        <Card className="border-rose-200 bg-rose-50 text-sm text-rose-700">{error}</Card>
+        <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
       <Card className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700">
+            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">
               {meeting.group_name}
             </p>
-            <h3 className="mt-1 text-lg font-semibold text-slate-900">{meeting.title}</h3>
+            <h3 className="mt-1 text-lg font-semibold text-foreground">{meeting.title}</h3>
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-            {meeting.status}
+          <span className="rounded-full bg-card-muted px-3 py-1 text-xs font-semibold text-muted">
+            {meeting.status === "selected" ? copy.common.selected : copy.common.open}
           </span>
         </div>
-        <p className="text-sm leading-6 text-slate-500">
-          {formatDateWindow(meeting.date_from, meeting.date_to)} · {meeting.duration_minutes} min ·
-          at least {meeting.min_participants} participant
-          {meeting.min_participants === 1 ? "" : "s"}
+        <p className="text-sm leading-7 text-muted">
+          {copy.meeting.summary(
+            formatDateWindow(meeting.date_from, meeting.date_to, language),
+            meeting.duration_minutes,
+            meeting.min_participants,
+          )}
         </p>
       </Card>
 
@@ -80,6 +90,7 @@ export default async function MeetingDetailPage({
               isOwner={isOwner}
               isSelected={meeting.selected_option_id === option.id}
               key={option.id}
+              language={language}
               meetingId={meeting.id}
               option={option}
               timezone={user.timezone}
@@ -88,8 +99,8 @@ export default async function MeetingDetailPage({
         </div>
       ) : (
         <EmptyState
-          description="There are no candidate slots on this meeting request yet."
-          title="No meeting options yet"
+          description={copy.meeting.noOptionsDescription}
+          title={copy.meeting.noOptionsTitle}
         />
       )}
 
@@ -97,7 +108,7 @@ export default async function MeetingDetailPage({
         className={buttonStyles({ fullWidth: true, variant: "secondary" })}
         href={`/groups/${meeting.group_id}`}
       >
-        Back to group
+        {copy.common.backToGroup}
       </Link>
     </AppShell>
   );

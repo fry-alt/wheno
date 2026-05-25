@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getCurrentUser } from "@/lib/auth";
 import { joinGroupAction } from "@/lib/actions";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import { decodeSearchMessage, readSearchParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,26 +23,32 @@ export default async function JoinPage({
   const error = decodeSearchMessage(readSearchParam(params.error));
   const inviteCode = readSearchParam(params.code) ?? "";
   const user = await getCurrentUser();
+  const { language, theme } = await getUiPreferences();
+  const copy = getTranslations(language);
 
   if (!user) {
     return (
       <AppShell
-        description="We'll connect your Telegram session, then you can join with a code."
-        title="Join a group"
+        description={copy.join.splashDescription}
+        language={language}
+        theme={theme}
+        title={copy.join.title}
       >
-        <SessionBootstrap />
+        <SessionBootstrap language={language} />
       </AppShell>
     );
   }
 
   return (
     <AppShell
-      description="Paste the invite code your friend shared with you."
-      title="Join a group"
+      description={copy.join.description}
+      language={language}
+      theme={theme}
+      title={copy.join.title}
       user={user}
     >
       {error ? (
-        <Card className="border-rose-200 bg-rose-50 text-sm text-rose-700">{error}</Card>
+        <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
       <Card>
@@ -50,17 +58,17 @@ export default async function JoinPage({
             autoFocus
             defaultValue={inviteCode.toUpperCase()}
             id="inviteCode"
-            label="Invite code"
+            label={copy.join.codeLabel}
             name="inviteCode"
-            placeholder="AB12CD"
+            placeholder={copy.join.codePlaceholder}
             required
           />
-          <FormSubmitButton label="Join" pendingLabel="Joining group..." />
+          <FormSubmitButton label={copy.join.submit} pendingLabel={copy.join.pending} />
         </form>
       </Card>
 
       <Link className={buttonStyles({ fullWidth: true, variant: "secondary" })} href="/">
-        Back home
+        {copy.common.backHome}
       </Link>
     </AppShell>
   );

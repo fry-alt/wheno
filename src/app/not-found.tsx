@@ -1,17 +1,24 @@
 import { AppShell } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const { language, theme } = await getUiPreferences();
+  const copy = getTranslations(language);
+
   return (
     <AppShell
-      description="The page you were looking for is not here anymore."
-      title="Nothing to see here"
+      description={copy.notFound.description}
+      language={language}
+      theme={theme}
+      title={copy.notFound.title}
     >
       <EmptyState
         actionHref="/"
-        actionLabel="Back home"
-        description="The group or meeting may have moved, or you may need to join it first."
-        title="We couldn't find that page"
+        actionLabel={copy.common.backHome}
+        description={copy.notFound.emptyDescription}
+        title={copy.notFound.emptyTitle}
       />
     </AppShell>
   );

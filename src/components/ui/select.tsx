@@ -11,19 +11,19 @@ export function Select({ label, hint, className, id, children, ...props }: Selec
   return (
     <label className="block space-y-2" htmlFor={id}>
       {label ? (
-        <span className="block text-sm font-semibold text-slate-800">{label}</span>
+        <span className="block text-sm font-semibold text-foreground">{label}</span>
       ) : null}
       <select
         id={id}
         className={cn(
-          "h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100",
+          "h-12 w-full rounded-[20px] border border-border/80 bg-card-muted px-4 text-sm text-foreground outline-none transition focus:border-foreground/20 focus:bg-card-strong focus:ring-4 focus:ring-accent-soft/90",
           className,
         )}
         {...props}
       >
         {children}
       </select>
-      {hint ? <span className="block text-xs text-slate-500">{hint}</span> : null}
+      {hint ? <span className="block text-xs text-muted">{hint}</span> : null}
     </label>
   );
 }

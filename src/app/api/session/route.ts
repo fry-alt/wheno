@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { getLocalizedErrorMessage } from "@/lib/i18n";
+import type { Language } from "@/lib/preferences-shared";
 import {
   SESSION_COOKIE_NAME,
   createSessionCookie,
@@ -9,13 +11,14 @@ import { resolveTelegramProfile } from "@/lib/telegram";
 import { upsertTelegramUser } from "@/lib/db/queries";
 
 export async function POST(request: Request) {
-  try {
-    const body = (await request.json().catch(() => ({}))) as {
-      initDataRaw?: string;
-      timezone?: string;
-      isTMA?: boolean;
-    };
+  const body = (await request.json().catch(() => ({}))) as {
+    initDataRaw?: string;
+    timezone?: string;
+    isTMA?: boolean;
+    language?: Language;
+  };
 
+  try {
     const profile = resolveTelegramProfile({
       initDataRaw: body.initDataRaw,
       isTMA: body.isTMA,
@@ -42,10 +45,7 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "We could not open your wheno session yet.";
+    const message = getLocalizedErrorMessage(error, body.language ?? "en", "session.openFailed");
 
     return NextResponse.json({ error: message }, { status: 400 });
   }

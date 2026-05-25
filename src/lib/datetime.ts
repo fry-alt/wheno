@@ -1,7 +1,13 @@
 import { addDays, format, parseISO } from "date-fns";
+import { enUS, ru } from "date-fns/locale";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
+import type { Language } from "@/lib/preferences-shared";
 import { normalizeTimezone } from "@/lib/telegram";
+
+function getLocale(language: Language) {
+  return language === "ru" ? ru : enUS;
+}
 
 export function toUtcDateFromLocalParts(
   date: string,
@@ -24,11 +30,25 @@ export function getDateRangeUtc(
   return { start, end };
 }
 
-export function formatSlotDateTime(startAt: string, endAt: string, timezone: string) {
+export function getLocalDateValue(timezone: string, offsetDays = 0) {
+  return formatInTimeZone(
+    addDays(new Date(), offsetDays),
+    normalizeTimezone(timezone),
+    "yyyy-MM-dd",
+  );
+}
+
+export function formatSlotDateTime(
+  startAt: string,
+  endAt: string,
+  timezone: string,
+  language: Language,
+) {
   const normalizedTimezone = normalizeTimezone(timezone);
+  const locale = getLocale(language);
 
   return {
-    date: formatInTimeZone(startAt, normalizedTimezone, "EEE, MMM d"),
+    date: formatInTimeZone(startAt, normalizedTimezone, "EEE, MMM d", { locale }),
     time: `${formatInTimeZone(startAt, normalizedTimezone, "HH:mm")} - ${formatInTimeZone(
       endAt,
       normalizedTimezone,
@@ -37,13 +57,14 @@ export function formatSlotDateTime(startAt: string, endAt: string, timezone: str
   };
 }
 
-export function formatDateWindow(dateFrom: string, dateTo: string) {
+export function formatDateWindow(dateFrom: string, dateTo: string, language: Language) {
   const start = parseISO(dateFrom);
   const end = parseISO(dateTo);
+  const locale = getLocale(language);
 
   if (dateFrom === dateTo) {
-    return format(start, "MMM d");
+    return format(start, "MMM d", { locale });
   }
 
-  return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
+  return `${format(start, "MMM d", { locale })} - ${format(end, "MMM d", { locale })}`;
 }

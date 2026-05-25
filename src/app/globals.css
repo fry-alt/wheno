@@ -1,37 +1,81 @@
 @import "tailwindcss";
 
 :root {
-  --background: #eef3fb;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --muted: #64748b;
-  --border: rgba(148, 163, 184, 0.26);
+  --background: #edf3ff;
+  --foreground: #081427;
+  --card: rgba(255, 255, 255, 0.82);
+  --card-strong: rgba(255, 255, 255, 0.96);
+  --card-muted: rgba(240, 245, 255, 0.84);
+  --muted: #60708c;
+  --border: rgba(125, 147, 184, 0.2);
+  --accent: #2c67ff;
+  --accent-foreground: #ffffff;
+  --accent-soft: rgba(44, 103, 255, 0.14);
+  --danger: #e35b7d;
+  --danger-soft: rgba(227, 91, 125, 0.12);
+  --success-soft: rgba(42, 178, 122, 0.14);
+  --glow-start: rgba(86, 143, 255, 0.28);
+  --glow-end: rgba(255, 255, 255, 0);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-strong: var(--card-strong);
+  --color-card-muted: var(--card-muted);
   --color-muted: var(--muted);
   --color-border: var(--border);
-  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success-soft: var(--success-soft);
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+:root[data-theme="dark"] {
+  --background: #07111f;
+  --foreground: #f4f7ff;
+  --card: rgba(8, 16, 31, 0.84);
+  --card-strong: rgba(10, 19, 36, 0.96);
+  --card-muted: rgba(255, 255, 255, 0.04);
+  --muted: #96a6c3;
+  --border: rgba(155, 175, 214, 0.16);
+  --accent: #7ea6ff;
+  --accent-foreground: #081427;
+  --accent-soft: rgba(126, 166, 255, 0.18);
+  --danger: #ff8aa6;
+  --danger-soft: rgba(255, 138, 166, 0.16);
+  --success-soft: rgba(64, 203, 144, 0.16);
+  --glow-start: rgba(77, 125, 255, 0.32);
+  --glow-end: rgba(7, 17, 31, 0);
 }
 
 html {
   min-height: 100%;
   background: var(--background);
   color: var(--foreground);
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
   min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
+  background-image:
+    radial-gradient(circle at top, var(--glow-start), transparent 30%),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 96%, white 4%) 0%, var(--background) 100%);
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.18);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 a,
@@ -39,4 +83,10 @@ button,
 input,
 select {
   -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select {
+  font: inherit;
 }

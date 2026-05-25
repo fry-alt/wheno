@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getCurrentUser } from "@/lib/auth";
 import { createGroupAction } from "@/lib/actions";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import { decodeSearchMessage, readSearchParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -20,26 +22,32 @@ export default async function CreateGroupPage({
   const params = await searchParams;
   const error = decodeSearchMessage(readSearchParam(params.error));
   const user = await getCurrentUser();
+  const { language, theme } = await getUiPreferences();
+  const copy = getTranslations(language);
 
   if (!user) {
     return (
       <AppShell
-        description="We need your Telegram session before we can create a group."
-        title="Create a group"
+        description={copy.createGroup.splashDescription}
+        language={language}
+        theme={theme}
+        title={copy.createGroup.title}
       >
-        <SessionBootstrap />
+        <SessionBootstrap language={language} />
       </AppShell>
     );
   }
 
   return (
     <AppShell
-      description="Pick a short name your friends will recognize."
-      title="Create a group"
+      description={copy.createGroup.description}
+      language={language}
+      theme={theme}
+      title={copy.createGroup.title}
       user={user}
     >
       {error ? (
-        <Card className="border-rose-200 bg-rose-50 text-sm text-rose-700">{error}</Card>
+        <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
       <Card>
@@ -47,17 +55,20 @@ export default async function CreateGroupPage({
           <Input
             autoFocus
             id="name"
-            label="Group name"
+            label={copy.createGroup.nameLabel}
             name="name"
-            placeholder="Friday dinner crew"
+            placeholder={copy.createGroup.namePlaceholder}
             required
           />
-          <FormSubmitButton label="Create" pendingLabel="Creating group..." />
+          <FormSubmitButton
+            label={copy.createGroup.submit}
+            pendingLabel={copy.createGroup.pending}
+          />
         </form>
       </Card>
 
       <Link className={buttonStyles({ fullWidth: true, variant: "secondary" })} href="/">
-        Back home
+        {copy.common.backHome}
       </Link>
     </AppShell>
   );

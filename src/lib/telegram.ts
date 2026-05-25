@@ -1,6 +1,7 @@
 import { parse, validate } from "@telegram-apps/init-data-node";
 
 import { getTelegramBotToken, isProduction } from "@/lib/env";
+import { appError } from "@/lib/i18n";
 import type { TelegramProfile } from "@/lib/types";
 
 type ParsedTelegramUser = {
@@ -57,7 +58,7 @@ export function resolveTelegramProfile({
     const parsed = parse(initDataRaw) as { user?: ParsedTelegramUser };
 
     if (!parsed.user) {
-      throw new Error("Telegram did not send a user profile for this Mini App session.");
+      throw appError("telegram.userMissing");
     }
 
     return mapTelegramUser(parsed.user, timezone);
@@ -65,14 +66,10 @@ export function resolveTelegramProfile({
 
   if (isProduction()) {
     if (isTMA) {
-      throw new Error(
-        "Telegram opened wheno without Mini App credentials. Launch it from the bot's Menu Button or Web App button.",
-      );
+      throw appError("telegram.miniAppCredentialsMissing");
     }
 
-    throw new Error(
-      "Open wheno from your bot's Mini App button in Telegram, not as a regular link.",
-    );
+    throw appError("telegram.openFromMiniAppButton");
   }
 
   return getDevTelegramProfile(timezone);

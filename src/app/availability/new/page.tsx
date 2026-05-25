@@ -8,6 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createBusyBlockAction } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
+import { getLocalDateValue } from "@/lib/datetime";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import { decodeSearchMessage, readSearchParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,26 +24,32 @@ export default async function AvailabilityPage({
   const error = decodeSearchMessage(readSearchParam(params.error));
   const groupId = readSearchParam(params.groupId) ?? "";
   const user = await getCurrentUser();
+  const { language, theme } = await getUiPreferences();
+  const copy = getTranslations(language);
 
   if (!user) {
     return (
       <AppShell
-        description="We need your Telegram session before we can save availability."
-        title="Add busy time"
+        description={copy.availability.splashDescription}
+        language={language}
+        theme={theme}
+        title={copy.availability.title}
       >
-        <SessionBootstrap />
+        <SessionBootstrap language={language} />
       </AppShell>
     );
   }
 
   return (
     <AppShell
-      description="Add a block you already know you can't make."
-      title="Add busy time"
+      description={copy.availability.description}
+      language={language}
+      theme={theme}
+      title={copy.availability.title}
       user={user}
     >
       {error ? (
-        <Card className="border-rose-200 bg-rose-50 text-sm text-rose-700">{error}</Card>
+        <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
       <Card>
@@ -49,17 +58,41 @@ export default async function AvailabilityPage({
           <Input
             autoFocus
             id="title"
-            label="Title"
+            label={copy.availability.titleLabel}
             name="title"
-            placeholder="Work call"
+            placeholder={copy.availability.titlePlaceholder}
             required
           />
-          <Input id="date" label="Date" name="date" required type="date" />
+          <Input
+            defaultValue={getLocalDateValue(user.timezone)}
+            id="date"
+            label={copy.availability.dateLabel}
+            name="date"
+            required
+            type="date"
+          />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input id="startTime" label="Start time" name="startTime" required type="time" />
-            <Input id="endTime" label="End time" name="endTime" required type="time" />
+            <Input
+              defaultValue="18:00"
+              id="startTime"
+              label={copy.availability.startLabel}
+              name="startTime"
+              required
+              type="time"
+            />
+            <Input
+              defaultValue="19:00"
+              id="endTime"
+              label={copy.availability.endLabel}
+              name="endTime"
+              required
+              type="time"
+            />
           </div>
-          <FormSubmitButton label="Save busy block" pendingLabel="Saving..." />
+          <FormSubmitButton
+            label={copy.availability.submit}
+            pendingLabel={copy.availability.pending}
+          />
         </form>
       </Card>
 
@@ -67,7 +100,7 @@ export default async function AvailabilityPage({
         className={buttonStyles({ fullWidth: true, variant: "secondary" })}
         href={groupId ? `/groups/${groupId}` : "/"}
       >
-        Cancel
+        {groupId ? copy.common.backToGroup : copy.common.cancel}
       </Link>
     </AppShell>
   );

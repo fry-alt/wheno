@@ -8,6 +8,8 @@ import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 import { getGroupsForUser } from "@/lib/db/queries";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import { decodeSearchMessage, readSearchParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -20,17 +22,21 @@ export default async function HomePage({
   const params = await searchParams;
   const error = decodeSearchMessage(readSearchParam(params.error));
   const user = await getCurrentUser();
+  const { language, theme } = await getUiPreferences();
+  const copy = getTranslations(language);
 
   if (!user) {
     return (
       <AppShell
-        description="We'll connect your Telegram profile, then load your groups."
-        title="Find the best time together"
+        description={copy.home.splashDescription}
+        language={language}
+        theme={theme}
+        title={copy.home.splashTitle}
       >
         {error ? (
-          <Card className="border-rose-200 bg-rose-50 text-sm text-rose-700">{error}</Card>
+          <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
         ) : null}
-        <SessionBootstrap />
+        <SessionBootstrap language={language} />
       </AppShell>
     );
   }
@@ -39,38 +45,40 @@ export default async function HomePage({
 
   return (
     <AppShell
-      description="Create a group, share the invite, add busy times, and let wheno suggest the best slots."
-      title="Your groups"
+      description={copy.home.description}
+      language={language}
+      theme={theme}
+      title={copy.home.title}
       user={user}
     >
       {error ? (
-        <Card className="border-rose-200 bg-rose-50 text-sm text-rose-700">{error}</Card>
+        <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link className={buttonStyles({ fullWidth: true })} href="/groups/new">
-          Create group
+          {copy.home.createGroup}
         </Link>
         <Link
           className={buttonStyles({ fullWidth: true, variant: "secondary" })}
           href="/join"
         >
-          Join group
+          {copy.home.joinGroup}
         </Link>
       </div>
 
       {groups.length ? (
         <div className="space-y-3">
           {groups.map((group) => (
-            <GroupCard group={group} key={group.id} />
+            <GroupCard group={group} key={group.id} language={language} />
           ))}
         </div>
       ) : (
         <EmptyState
           actionHref="/groups/new"
-          actionLabel="Create your first group"
-          description="Start with one friend group, then invite everyone with a short code."
-          title="No groups yet"
+          actionLabel={copy.home.emptyAction}
+          description={copy.home.emptyDescription}
+          title={copy.home.emptyTitle}
         />
       )}
     </AppShell>

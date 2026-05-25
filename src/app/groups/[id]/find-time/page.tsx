@@ -11,6 +11,9 @@ import { Select } from "@/components/ui/select";
 import { createMeetingRequestAction } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { getGroupDetailForUser } from "@/lib/db/queries";
+import { getLocalDateValue } from "@/lib/datetime";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import { decodeSearchMessage, readSearchParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -25,14 +28,18 @@ export default async function FindTimePage({
   const [{ id }, rawSearchParams] = await Promise.all([params, searchParams]);
   const error = decodeSearchMessage(readSearchParam(rawSearchParams.error));
   const user = await getCurrentUser();
+  const { language, theme } = await getUiPreferences();
+  const copy = getTranslations(language);
 
   if (!user) {
     return (
       <AppShell
-        description="We'll connect your Telegram session, then load the scheduler."
-        title="Find time"
+        description={copy.findTime.splashDescription}
+        language={language}
+        theme={theme}
+        title={copy.findTime.title}
       >
-        <SessionBootstrap />
+        <SessionBootstrap language={language} />
       </AppShell>
     );
   }
@@ -47,35 +54,31 @@ export default async function FindTimePage({
 
   return (
     <AppShell
-      description="Set a date range and let wheno suggest the strongest common slots."
-      title={`Find time for ${group.name}`}
+      description={copy.findTime.description}
+      language={language}
+      theme={theme}
+      title={`${copy.findTime.title}: ${group.name}`}
       user={user}
     >
       {error ? (
-        <Card className="border-rose-200 bg-rose-50 text-sm text-rose-700">{error}</Card>
+        <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
       {!isOwner ? (
-        <Card className="space-y-3">
-          <p className="text-sm leading-6 text-slate-600">
-            Only the group owner can create a meeting request for this group.
-          </p>
+        <Card className="space-y-4">
+          <p className="text-sm leading-7 text-muted">{copy.findTime.ownerOnly}</p>
           <Link
             className={buttonStyles({ fullWidth: true, variant: "secondary" })}
             href={`/groups/${group.id}`}
           >
-            Back to group
+            {copy.common.backToGroup}
           </Link>
         </Card>
       ) : (
         <>
           <Card className="space-y-2">
-            <p className="text-sm text-slate-500">
-              {group.members.length} member{group.members.length === 1 ? "" : "s"} available to consider.
-            </p>
-            <p className="text-sm text-slate-500">
-              Minimum participants cannot be higher than {group.members.length}.
-            </p>
+            <p className="text-sm text-muted">{copy.findTime.membersAvailable(group.members.length)}</p>
+            <p className="text-sm text-muted">{copy.findTime.membersLimit(group.members.length)}</p>
           </Card>
 
           <Card>
@@ -84,19 +87,34 @@ export default async function FindTimePage({
               <Input
                 autoFocus
                 id="title"
-                label="Meeting title"
+                label={copy.findTime.titleLabel}
                 name="title"
-                placeholder="Dinner next week"
+                placeholder={copy.findTime.titlePlaceholder}
                 required
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input id="dateFrom" label="From" name="dateFrom" required type="date" />
-                <Input id="dateTo" label="To" name="dateTo" required type="date" />
+                <Input
+                  defaultValue={getLocalDateValue(user.timezone)}
+                  id="dateFrom"
+                  label={copy.findTime.fromLabel}
+                  name="dateFrom"
+                  required
+                  type="date"
+                />
+                <Input
+                  defaultValue={getLocalDateValue(user.timezone, 7)}
+                  id="dateTo"
+                  label={copy.findTime.toLabel}
+                  name="dateTo"
+                  required
+                  type="date"
+                />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
+                  defaultValue="60"
                   id="durationMinutes"
-                  label="Duration (minutes)"
+                  label={copy.findTime.durationLabel}
                   min="30"
                   name="durationMinutes"
                   required
@@ -104,8 +122,9 @@ export default async function FindTimePage({
                   type="number"
                 />
                 <Input
+                  defaultValue={String(Math.min(Math.max(group.members.length, 1), 2))}
                   id="minParticipants"
-                  label="Minimum participants"
+                  label={copy.findTime.minParticipantsLabel}
                   max={String(group.members.length)}
                   min="1"
                   name="minParticipants"
@@ -116,15 +135,15 @@ export default async function FindTimePage({
               <Select
                 defaultValue="any"
                 id="preferredTime"
-                label="Preferred time of day"
+                label={copy.findTime.preferredTimeLabel}
                 name="preferredTime"
               >
-                <option value="any">Any time</option>
-                <option value="morning">Morning</option>
-                <option value="afternoon">Afternoon</option>
-                <option value="evening">Evening</option>
+                <option value="any">{copy.findTime.anyTime}</option>
+                <option value="morning">{copy.findTime.morning}</option>
+                <option value="afternoon">{copy.findTime.afternoon}</option>
+                <option value="evening">{copy.findTime.evening}</option>
               </Select>
-              <FormSubmitButton label="Find the best slots" pendingLabel="Calculating..." />
+              <FormSubmitButton label={copy.findTime.submit} pendingLabel={copy.findTime.pending} />
             </form>
           </Card>
         </>
@@ -134,7 +153,7 @@ export default async function FindTimePage({
         className={buttonStyles({ fullWidth: true, variant: "secondary" })}
         href={`/groups/${group.id}`}
       >
-        Back to group
+        {copy.common.backToGroup}
       </Link>
     </AppShell>
   );

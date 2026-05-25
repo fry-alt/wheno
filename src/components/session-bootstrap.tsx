@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
 import { LoadingState } from "@/components/loading-state";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getTranslations } from "@/lib/i18n";
+import type { Language } from "@/lib/preferences-shared";
 
 type Status = "loading" | "error";
 
@@ -36,15 +38,21 @@ function getTelegramInitDataRaw() {
   return undefined;
 }
 
-export function SessionBootstrap() {
+export function SessionBootstrap({ language }: { language: Language }) {
   const router = useRouter();
+  const copy = getTranslations(language);
   const [status, setStatus] = useState<Status>("loading");
-  const [message, setMessage] = useState("Checking your Telegram profile.");
+  const [message, setMessage] = useState(copy.session.checkingProfile);
 
   useEffect(() => {
     let cancelled = false;
 
     async function bootstrap() {
+      if (!cancelled) {
+        setStatus("loading");
+        setMessage(copy.session.checkingProfile);
+      }
+
       try {
         init();
 
@@ -78,6 +86,7 @@ export function SessionBootstrap() {
             initDataRaw,
             timezone,
             isTMA: launchedInMiniApp,
+            language,
           }),
         });
 
@@ -109,20 +118,20 @@ export function SessionBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [copy.session.checkingProfile, language, router]);
 
   if (status === "loading") {
-    return <LoadingState description={message} />;
+    return <LoadingState description={message} title={copy.session.opening} />;
   }
 
   return (
     <Card className="space-y-4 text-center">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-slate-900">We couldn&apos;t open wheno yet</h2>
-        <p className="text-sm leading-6 text-slate-500">{message}</p>
+        <h2 className="text-lg font-semibold text-foreground">{copy.session.errorTitle}</h2>
+        <p className="text-sm leading-7 text-muted">{message}</p>
       </div>
       <Button fullWidth onClick={() => window.location.reload()}>
-        Try again
+        {copy.common.tryAgain}
       </Button>
     </Card>
   );

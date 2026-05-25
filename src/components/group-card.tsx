@@ -1,27 +1,41 @@
 import Link from "next/link";
 
 import { Card } from "@/components/ui/card";
+import { getTranslations } from "@/lib/i18n";
+import type { Language } from "@/lib/preferences-shared";
 import type { GroupListItem } from "@/lib/types";
 
-export function GroupCard({ group }: { group: GroupListItem }) {
+export function GroupCard({
+  group,
+  language,
+}: {
+  group: GroupListItem;
+  language: Language;
+}) {
+  const copy = getTranslations(language);
+
   return (
     <Link href={`/groups/${group.id}`}>
-      <Card className="transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_20px_60px_-36px_rgba(37,99,235,0.45)]">
-        <div className="flex items-start justify-between gap-3">
+      <Card className="transition duration-200 hover:-translate-y-0.5 hover:border-foreground/12 hover:shadow-[0_30px_80px_-48px_rgba(8,20,39,0.78)]">
+        <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-slate-900">{group.name}</h3>
-            <p className="text-sm text-slate-500">
-              {group.member_count} member{group.member_count === 1 ? "" : "s"} · code{" "}
-              <span className="font-semibold text-slate-700">{group.invite_code}</span>
+            <h3 className="text-lg font-semibold tracking-[-0.03em] text-foreground">
+              {group.name}
+            </h3>
+            <p className="text-sm text-muted">
+              {copy.nouns.members(group.member_count)} · {copy.common.inviteCode.toLowerCase()}{" "}
+              <span className="font-semibold tracking-[0.16em] text-foreground">
+                {group.invite_code}
+              </span>
             </p>
           </div>
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
-            {group.role}
+          <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
+            {group.role === "owner" ? copy.common.owner : copy.common.member}
           </span>
         </div>
-        <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
-          <span>{group.open_meeting_count} open meeting request{group.open_meeting_count === 1 ? "" : "s"}</span>
-          <span>Open group</span>
+        <div className="mt-5 flex items-center justify-between gap-4 border-t border-border/70 pt-4 text-sm text-muted">
+          <span>{copy.nouns.meetingRequests(group.open_meeting_count)}</span>
+          <span className="font-semibold text-foreground">{copy.common.openGroup}</span>
         </div>
       </Card>
     </Link>

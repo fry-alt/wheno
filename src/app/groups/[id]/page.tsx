@@ -10,6 +10,9 @@ import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 import { getGroupDetailForUser } from "@/lib/db/queries";
+import { formatDateWindow } from "@/lib/datetime";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import { buildInviteLink, decodeSearchMessage, readSearchParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -24,14 +27,18 @@ export default async function GroupDetailPage({
   const [{ id }, rawSearchParams] = await Promise.all([params, searchParams]);
   const error = decodeSearchMessage(readSearchParam(rawSearchParams.error));
   const user = await getCurrentUser();
+  const { language, theme } = await getUiPreferences();
+  const copy = getTranslations(language);
 
   if (!user) {
     return (
       <AppShell
-        description="We'll connect your Telegram session, then load this group."
-        title="Loading group"
+        description={copy.group.splashDescription}
+        language={language}
+        theme={theme}
+        title={copy.group.loadingTitle}
       >
-        <SessionBootstrap />
+        <SessionBootstrap language={language} />
       </AppShell>
     );
   }
@@ -47,69 +54,85 @@ export default async function GroupDetailPage({
 
   return (
     <AppShell
-      description="Invite friends, add busy blocks, and start a meeting request when everyone is in."
+      description={copy.group.description}
+      language={language}
+      theme={theme}
       title={group.name}
       user={user}
     >
       {error ? (
-        <Card className="border-rose-200 bg-rose-50 text-sm text-rose-700">{error}</Card>
+        <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
       <Card className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700">
-              Invite code
+            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+              {copy.common.inviteCode}
             </p>
-            <h3 className="mt-1 text-2xl font-semibold tracking-[0.08em] text-slate-900">
+            <h3 className="mt-2 text-2xl font-semibold tracking-[0.22em] text-foreground">
               {group.invite_code}
             </h3>
           </div>
-          <CopyInviteButton inviteLink={inviteLink} />
+          <CopyInviteButton
+            inviteLink={inviteLink}
+            labels={{
+              defaultLabel: copy.common.copyInviteLink,
+              copiedLabel: copy.common.linkCopied,
+              unavailableLabel: copy.common.copyUnavailable,
+              shareLabel: copy.common.shareLink,
+            }}
+          />
         </div>
-        <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
-          Share this link: <span className="font-medium text-slate-900">{inviteLink}</span>
+        <p className="rounded-[22px] border border-border/60 bg-card-muted px-4 py-3 text-sm leading-7 text-muted">
+          {copy.common.shareThisLink}:{" "}
+          <span className="break-all font-medium text-foreground">{inviteLink}</span>
         </p>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={`grid gap-3 ${isOwner ? "sm:grid-cols-2" : ""}`}>
         <Link
           className={buttonStyles({ fullWidth: true, variant: "secondary" })}
           href={`/availability/new?groupId=${group.id}`}
         >
-          Add busy time
+          {copy.group.addBusyTime}
         </Link>
         {isOwner ? (
           <Link className={buttonStyles({ fullWidth: true })} href={`/groups/${group.id}/find-time`}>
-            Find time
+            {copy.group.findTime}
           </Link>
         ) : null}
       </div>
 
-      <MemberList members={group.members} />
+      <MemberList language={language} members={group.members} />
 
       {group.meeting_requests.length ? (
         <Card>
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900">Meeting requests</h3>
-            <span className="text-sm text-slate-500">{group.meeting_requests.length} total</span>
+            <h3 className="text-base font-semibold text-foreground">
+              {copy.group.meetingRequestsTitle}
+            </h3>
+            <span className="text-sm text-muted">
+              {group.meeting_requests.length} {copy.common.total}
+            </span>
           </div>
           <div className="mt-4 space-y-3">
             {group.meeting_requests.map((meeting) => (
               <Link
-                className="block rounded-2xl bg-slate-50 px-4 py-4 transition hover:bg-slate-100"
+                className="block rounded-[24px] border border-border/60 bg-card-muted px-4 py-4 transition duration-200 hover:bg-card-strong"
                 href={`/meetings/${meeting.id}`}
                 key={meeting.id}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-slate-900">{meeting.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {meeting.date_from} to {meeting.date_to} · {meeting.duration_minutes} min
+                    <p className="font-semibold text-foreground">{meeting.title}</p>
+                    <p className="mt-1 text-sm text-muted">
+                      {formatDateWindow(meeting.date_from, meeting.date_to, language)} ·{" "}
+                      {meeting.duration_minutes} {copy.common.minuteShort}
                     </p>
                   </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                    {meeting.status}
+                  <span className="rounded-full bg-card-strong px-3 py-1 text-xs font-semibold text-muted ring-1 ring-border/80">
+                    {meeting.status === "selected" ? copy.common.selected : copy.common.open}
                   </span>
                 </div>
               </Link>
@@ -119,18 +142,18 @@ export default async function GroupDetailPage({
       ) : (
         <EmptyState
           actionHref={isOwner ? `/groups/${group.id}/find-time` : undefined}
-          actionLabel={isOwner ? "Create a meeting request" : undefined}
+          actionLabel={isOwner ? copy.group.createMeetingRequest : undefined}
           description={
             isOwner
-              ? "Once everyone has added a few busy times, ask wheno to suggest the best slots."
-              : "The group owner can create a meeting request once everyone has shared availability."
+              ? copy.group.noMeetingsOwnerDescription
+              : copy.group.noMeetingsMemberDescription
           }
-          title="No meeting requests yet"
+          title={copy.group.noMeetingsTitle}
         />
       )}
 
       <Link className={buttonStyles({ fullWidth: true, variant: "secondary" })} href="/">
-        Back home
+        {copy.common.backHome}
       </Link>
     </AppShell>
   );

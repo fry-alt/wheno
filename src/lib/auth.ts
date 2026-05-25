@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getUserById } from "@/lib/db/queries";
+import { getTranslations } from "@/lib/i18n";
+import { getUiPreferences } from "@/lib/preferences";
 import { SESSION_COOKIE_NAME, parseSessionCookie } from "@/lib/session";
 
 export async function getCurrentSession() {
@@ -23,7 +25,10 @@ export async function requireCurrentUser() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/?error=Please open wheno from Telegram again.");
+    const { language } = await getUiPreferences();
+    const copy = getTranslations(language);
+
+    redirect(`/?error=${encodeURIComponent(copy.errors["auth.openFromTelegramAgain"]())}`);
   }
 
   return user;
