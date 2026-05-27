@@ -55,7 +55,7 @@ export default async function HomePage({
         <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Link className={buttonStyles({ fullWidth: true })} href="/groups/new">
           {copy.home.createGroup}
         </Link>
@@ -64,6 +64,12 @@ export default async function HomePage({
           href="/join"
         >
           {copy.home.joinGroup}
+        </Link>
+        <Link
+          className={buttonStyles({ fullWidth: true, variant: "secondary" })}
+          href="/calendar"
+        >
+          {copy.common.openCalendar}
         </Link>
       </div>
 

@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { addDays, format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { CopyInviteButton } from "@/components/copy-invite-button";
 import { EmptyState } from "@/components/empty-state";
+import { GroupAvailabilityCalendar } from "@/components/group-availability-calendar";
 import { MemberList } from "@/components/member-list";
 import { SessionBootstrap } from "@/components/session-bootstrap";
 import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
-import { getGroupDetailForUser } from "@/lib/db/queries";
-import { formatDateWindow } from "@/lib/datetime";
+import { getBusyBlocksForUsersInRange, getGroupDetailForUser } from "@/lib/db/queries";
+import { formatDateWindow, getDateRangeUtc, getLocalDateValue } from "@/lib/datetime";
 import { getTranslations } from "@/lib/i18n";
 import { getUiPreferences } from "@/lib/preferences";
 import { buildInviteLink, decodeSearchMessage, readSearchParam } from "@/lib/utils";
@@ -51,6 +53,14 @@ export default async function GroupDetailPage({
 
   const isOwner = group.owner_id === user.id;
   const inviteLink = buildInviteLink(group.invite_code);
+  const weekStart = getLocalDateValue(user.timezone);
+  const weekEnd = format(addDays(parseISO(weekStart), 6), "yyyy-MM-dd");
+  const { start, end } = getDateRangeUtc(weekStart, weekEnd, user.timezone);
+  const busyBlocks = await getBusyBlocksForUsersInRange({
+    userIds: group.members.map((member) => member.user_id),
+    startAt: start,
+    endAt: end,
+  });
 
   return (
     <AppShell
@@ -105,6 +115,15 @@ export default async function GroupDetailPage({
       </div>
 
       <MemberList language={language} members={group.members} />
+
+      <GroupAvailabilityCalendar
+        blocks={busyBlocks}
+        copy={copy.group}
+        language={language}
+        members={group.members}
+        timezone={user.timezone}
+        weekStart={weekStart}
+      />
 
       {group.meeting_requests.length ? (
         <Card>
