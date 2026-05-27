@@ -1,4 +1,5 @@
 import { randomInt } from "node:crypto";
+import { eachDayOfInterval, format, parseISO } from "date-fns";
 
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getDateRangeUtc, toUtcDateFromLocalParts } from "@/lib/datetime";
@@ -6,7 +7,9 @@ import { appError, type AppErrorKey } from "@/lib/i18n";
 import { calculateMeetingOptions } from "@/lib/scheduler";
 import type {
   AppUser,
+  BusyBlockSummary,
   GroupDetail,
+  GroupBusyBlockSummary,
   GroupListItem,
   GroupMemberSummary,
   MeetingDetail,
@@ -433,6 +436,130 @@ export async function createBusyBlockForUser({
   if (error) {
     throw appError("busyBlock.saveFailed");
   }
+}
+
+export async function createWeeklyBusyBlocksForUser({
+  userId,
+  title,
+  startDate,
+  endDate,
+  weekdays,
+  startTime,
+  endTime,
+  timezone,
+}: {
+  userId: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  weekdays: number[];
+  startTime: string;
+  endTime: string;
+  timezone: string;
+}) {
+  const admin = getAdminSupabase();
+  const trimmedTitle = title.trim();
+
+  if (!trimmedTitle) {
+    throw appError("busyBlock.titleRequired");
+  }
+
+  if (endDate < startDate) {
+    throw appError("busyBlock.invalidDateRange");
+  }
+
+  const uniqueWeekdays = Array.from(new Set(weekdays)).filter((weekday) => weekday >= 0 && weekday <= 6);
+
+  if (!uniqueWeekdays.length) {
+    throw appError("busyBlock.weekdayRequired");
+  }
+
+  const days = eachDayOfInterval({
+    start: parseISO(startDate),
+    end: parseISO(endDate),
+  }).filter((day) => uniqueWeekdays.includes(day.getDay()));
+
+  if (!days.length) {
+    throw appError("busyBlock.noMatchingWeekdays");
+  }
+
+  const rows = days.map((day) => {
+    const date = format(day, "yyyy-MM-dd");
+    const startAt = toUtcDateFromLocalParts(date, startTime, timezone);
+    const endAt = toUtcDateFromLocalParts(date, endTime, timezone);
+
+    if (endAt <= startAt) {
+      throw appError("busyBlock.invalidTimeRange");
+    }
+
+    return {
+      user_id: userId,
+      title: trimmedTitle,
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+      source: "manual",
+    };
+  });
+
+  const { error } = await admin.from("busy_blocks").insert(rows);
+
+  if (error) {
+    throw appError("busyBlock.saveFailed");
+  }
+}
+
+export async function getBusyBlocksForUserInRange({
+  userId,
+  startAt,
+  endAt,
+}: {
+  userId: string;
+  startAt: Date;
+  endAt: Date;
+}) {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("busy_blocks")
+    .select("id, title, start_at, end_at, source")
+    .eq("user_id", userId)
+    .lt("start_at", endAt.toISOString())
+    .gt("end_at", startAt.toISOString())
+    .order("start_at", { ascending: true });
+
+  if (error) {
+    throw appError("busyBlock.loadFailed");
+  }
+
+  return (data ?? []) as BusyBlockSummary[];
+}
+
+export async function getBusyBlocksForUsersInRange({
+  userIds,
+  startAt,
+  endAt,
+}: {
+  userIds: string[];
+  startAt: Date;
+  endAt: Date;
+}) {
+  if (!userIds.length) {
+    return [] as GroupBusyBlockSummary[];
+  }
+
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("busy_blocks")
+    .select("id, user_id, title, start_at, end_at, source")
+    .in("user_id", userIds)
+    .lt("start_at", endAt.toISOString())
+    .gt("end_at", startAt.toISOString())
+    .order("start_at", { ascending: true });
+
+  if (error) {
+    throw appError("busyBlock.loadFailed");
+  }
+
+  return (data ?? []) as GroupBusyBlockSummary[];
 }
 
 export async function createMeetingRequestWithOptions({

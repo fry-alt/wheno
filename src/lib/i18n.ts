@@ -17,7 +17,11 @@ export type AppErrorKey =
   | "group.inviteCodeInvalid"
   | "group.joinFailed"
   | "busyBlock.titleRequired"
+  | "busyBlock.invalidDateRange"
   | "busyBlock.invalidTimeRange"
+  | "busyBlock.weekdayRequired"
+  | "busyBlock.noMatchingWeekdays"
+  | "busyBlock.loadFailed"
   | "busyBlock.saveFailed"
   | "meeting.groupNotFound"
   | "meeting.ownerOnly"
@@ -171,6 +175,7 @@ export function getTranslations(language: Language) {
         inviteCode: "Код приглашения",
         shareThisLink: "Поделитесь этой ссылкой",
         openGroup: "Открыть группу",
+        openCalendar: "Мой календарь",
         selectedSlot: "Этот слот уже выбран как финальный.",
         selectThisSlot: "Выбрать этот слот",
         noOneFree: "Никто не свободен.",
@@ -215,13 +220,43 @@ export function getTranslations(language: Language) {
         splashDescription:
           "Сначала нужен ваш Telegram-сеанс, чтобы сохранить занятое время.",
         description: "Добавьте интервал, в который вы точно не сможете.",
+        modeQuick: "Быстро",
+        modeManual: "Вручную",
+        modeWeekly: "Еженедельно",
+        quickDateLabel: "Дата",
+        quickPresetLabel: "Шаблон",
+        manualTitle: "Разовый занятый интервал",
+        weeklyTitle: "Повторять каждую неделю",
         titleLabel: "Название",
         titlePlaceholder: "Рабочий звонок",
         dateLabel: "Дата",
+        startDateLabel: "С даты",
+        endDateLabel: "По дату",
         startLabel: "Начало",
         endLabel: "Конец",
+        weekdaysLabel: "Дни недели",
         submit: "Сохранить блок",
         pending: "Сохраняем...",
+        quickPresets: {
+          lunch: "Обед",
+          workday: "Работа",
+          evening: "Вечер",
+        },
+        weekdays: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+      },
+      calendar: {
+        title: "Мой календарь",
+        splashDescription:
+          "Сначала нужен ваш Telegram-сеанс, чтобы показать личный календарь.",
+        description: "Ваши занятые интервалы на ближайшую неделю.",
+        addBusyTime: "Добавить занятость",
+        upcomingTitle: "Ближайшие блоки",
+        weekTitle: "Неделя",
+        emptyTitle: "Пока нет занятых блоков",
+        emptyDescription:
+          "Добавьте разовые или еженедельные интервалы, и они появятся здесь.",
+        hoursLabel: "часы",
+        freeDay: "Свободно",
       },
       group: {
         loadingTitle: "Загружаем группу",
@@ -231,6 +266,11 @@ export function getTranslations(language: Language) {
         addBusyTime: "Добавить занятость",
         findTime: "Найти время",
         membersTitle: "Участники",
+        availabilityTitle: "Календарь занятости",
+        availabilityDescription: "Занятые интервалы участников на ближайшую неделю.",
+        availabilityEmptyDay: "Свободно",
+        availabilityNoBlocks: "На этой неделе пока нет занятых интервалов.",
+        availabilityBlocks: "блоков",
         meetingRequestsTitle: "Запросы на встречу",
         noMeetingsTitle: "Пока нет запросов",
         noMeetingsOwnerDescription:
@@ -317,8 +357,15 @@ export function getTranslations(language: Language) {
         "group.inviteCodeInvalid": () => "Такой код приглашения не найден.",
         "group.joinFailed": () => "Пока не удалось войти в группу.",
         "busyBlock.titleRequired": () => "Пожалуйста, назовите этот занятый интервал.",
+        "busyBlock.invalidDateRange": () =>
+          "Конечная дата должна быть позже начальной.",
         "busyBlock.invalidTimeRange": () =>
           "Время окончания должно быть позже времени начала.",
+        "busyBlock.weekdayRequired": () => "Выберите хотя бы один день недели.",
+        "busyBlock.noMatchingWeekdays": () =>
+          "В выбранном диапазоне нет подходящих дней недели.",
+        "busyBlock.loadFailed": () =>
+          "Пока не удалось загрузить ваши занятые интервалы.",
         "busyBlock.saveFailed": () => "Пока не удалось сохранить этот занятый интервал.",
         "meeting.groupNotFound": () => "Не удалось найти эту группу.",
         "meeting.ownerOnly": () =>
@@ -398,6 +445,7 @@ export function getTranslations(language: Language) {
       inviteCode: "Invite code",
       shareThisLink: "Share this link",
       openGroup: "Open group",
+      openCalendar: "My calendar",
       selectedSlot: "This slot has been selected as the final choice.",
       selectThisSlot: "Select this slot",
       noOneFree: "No one is free.",
@@ -440,13 +488,42 @@ export function getTranslations(language: Language) {
       title: "Add busy time",
       splashDescription: "We need your Telegram session before we can save availability.",
       description: "Add a block you already know you can't make.",
+      modeQuick: "Quick",
+      modeManual: "Manual",
+      modeWeekly: "Weekly",
+      quickDateLabel: "Date",
+      quickPresetLabel: "Quick add",
+      manualTitle: "One-time busy block",
+      weeklyTitle: "Recurring weekly block",
       titleLabel: "Title",
       titlePlaceholder: "Work call",
       dateLabel: "Date",
+      startDateLabel: "Start date",
+      endDateLabel: "End date",
       startLabel: "Start time",
       endLabel: "End time",
+      weekdaysLabel: "Weekdays",
       submit: "Save busy block",
       pending: "Saving...",
+      quickPresets: {
+        lunch: "Lunch",
+        workday: "Workday",
+        evening: "Evening",
+      },
+      weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    },
+    calendar: {
+      title: "My calendar",
+      splashDescription: "We need your Telegram session before we can show your calendar.",
+      description: "Your busy blocks for the week ahead.",
+      addBusyTime: "Add busy time",
+      upcomingTitle: "Upcoming blocks",
+      weekTitle: "Week view",
+      emptyTitle: "No busy blocks yet",
+      emptyDescription:
+        "Add one-time or weekly busy blocks, and they will appear here.",
+      hoursLabel: "hours",
+      freeDay: "Free",
     },
     group: {
       loadingTitle: "Loading group",
@@ -456,6 +533,11 @@ export function getTranslations(language: Language) {
       addBusyTime: "Add busy time",
       findTime: "Find time",
       membersTitle: "Members",
+      availabilityTitle: "Availability calendar",
+      availabilityDescription: "Member busy blocks for the week ahead.",
+      availabilityEmptyDay: "Free",
+      availabilityNoBlocks: "No busy blocks this week yet.",
+      availabilityBlocks: "blocks",
       meetingRequestsTitle: "Meeting requests",
       noMeetingsTitle: "No meeting requests yet",
       noMeetingsOwnerDescription:
@@ -537,7 +619,12 @@ export function getTranslations(language: Language) {
       "group.inviteCodeInvalid": () => "That invite code doesn't match any group.",
       "group.joinFailed": () => "We could not join that group yet.",
       "busyBlock.titleRequired": () => "Please name this busy block.",
+      "busyBlock.invalidDateRange": () => "End date needs to be after the start date.",
       "busyBlock.invalidTimeRange": () => "End time needs to be after the start time.",
+      "busyBlock.weekdayRequired": () => "Choose at least one weekday.",
+      "busyBlock.noMatchingWeekdays": () =>
+        "No selected weekdays fall inside that date range.",
+      "busyBlock.loadFailed": () => "We could not load your busy blocks yet.",
       "busyBlock.saveFailed": () => "We could not save that busy block yet.",
       "meeting.groupNotFound": () => "We could not find that group.",
       "meeting.ownerOnly": () => "Only the group owner can create a meeting request.",

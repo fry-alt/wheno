@@ -88,6 +88,18 @@ export interface SchedulerBusyBlock {
   endAt: string;
 }
 
+export interface BusyBlockSummary {
+  id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+  source: string;
+}
+
+export interface GroupBusyBlockSummary extends BusyBlockSummary {
+  user_id: string;
+}
+
 export interface ScheduledOption {
   startAt: string;
   endAt: string;

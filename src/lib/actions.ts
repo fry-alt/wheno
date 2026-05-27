@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import {
   createBusyBlockForUser,
+  createWeeklyBusyBlocksForUser,
   createGroupForUser,
   createMeetingRequestWithOptions,
   joinGroupByInviteCode,
@@ -69,17 +70,34 @@ export async function createBusyBlockAction(formData: FormData) {
   const user = await requireCurrentUser();
   const { language } = await getUiPreferences();
   const groupId = getString(formData, "groupId");
+  const mode = getString(formData, "mode");
   const returnPath = groupId ? `/groups/${groupId}` : "/";
 
   try {
-    await createBusyBlockForUser({
-      userId: user.id,
-      title: getString(formData, "title"),
-      date: getString(formData, "date"),
-      startTime: getString(formData, "startTime"),
-      endTime: getString(formData, "endTime"),
-      timezone: user.timezone,
-    });
+    if (mode === "weekly") {
+      await createWeeklyBusyBlocksForUser({
+        userId: user.id,
+        title: getString(formData, "title"),
+        startDate: getString(formData, "startDate"),
+        endDate: getString(formData, "endDate"),
+        weekdays: formData
+          .getAll("weekdays")
+          .map((weekday) => Number(String(weekday)))
+          .filter((weekday) => Number.isInteger(weekday)),
+        startTime: getString(formData, "startTime"),
+        endTime: getString(formData, "endTime"),
+        timezone: user.timezone,
+      });
+    } else {
+      await createBusyBlockForUser({
+        userId: user.id,
+        title: getString(formData, "title"),
+        date: getString(formData, "date"),
+        startTime: getString(formData, "startTime"),
+        endTime: getString(formData, "endTime"),
+        timezone: user.timezone,
+      });
+    }
 
     revalidatePath(returnPath);
     redirect(returnPath);
