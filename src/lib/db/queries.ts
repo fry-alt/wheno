@@ -1127,16 +1127,21 @@ export async function getCalendarEventsForUserInRange({
   endAt,
 }: {
   userId: string;
-  startAt: string;
-  endAt: string;
+  startAt: Date;
+  endAt: Date;
 }): Promise<CalendarEvent[]> {
   const admin = getAdminSupabase();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("calendar_events")
     .select("id, user_id, title, activity_type, starts_at, ends_at, location, energy_after, dress_code, is_flexible, notes, source, created_at")
     .eq("user_id", userId)
-    .gte("starts_at", startAt)
-    .lte("starts_at", endAt)
+    .gte("starts_at", startAt.toISOString())
+    .lte("starts_at", endAt.toISOString())
     .order("starts_at", { ascending: true });
+
+  if (error) {
+    throw appError("calendar.loadFailed");
+  }
+
   return (data ?? []) as CalendarEvent[];
 }

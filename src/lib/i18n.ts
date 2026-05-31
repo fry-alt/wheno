@@ -27,6 +27,7 @@ export type AppErrorKey =
   | "busyBlock.loadFailed"
   | "busyBlock.saveFailed"
   | "busyBlock.toggleFailed"
+  | "calendar.loadFailed"
   | "meeting.groupNotFound"
   | "meeting.ownerOnly"
   | "meeting.titleRequired"
@@ -387,6 +388,7 @@ export function getTranslations(language: Language) {
           "Пока не удалось загрузить ваши занятые интервалы.",
         "busyBlock.saveFailed": () => "Пока не удалось сохранить этот занятый интервал.",
         "busyBlock.toggleFailed": () => "Не удалось обновить занятость. Попробуйте ещё раз.",
+        "calendar.loadFailed": () => "Пока не удалось загрузить события календаря.",
         "meeting.groupNotFound": () => "Не удалось найти эту группу.",
         "meeting.ownerOnly": () =>
           "Только владелец группы может создать запрос на встречу.",
@@ -663,6 +665,7 @@ export function getTranslations(language: Language) {
       "busyBlock.loadFailed": () => "We could not load your busy blocks yet.",
       "busyBlock.saveFailed": () => "We could not save that busy block yet.",
       "busyBlock.toggleFailed": () => "Could not update availability. Please try again.",
+      "calendar.loadFailed": () => "We could not load your calendar events yet.",
       "meeting.groupNotFound": () => "We could not find that group.",
       "meeting.ownerOnly": () => "Only the group owner can create a meeting request.",
       "meeting.titleRequired": () => "Please give the meeting request a title.",
