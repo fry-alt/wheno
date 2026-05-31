@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { fromZonedTime } from "date-fns-tz";
+
 import { requireCurrentUser } from "@/lib/auth";
 import {
   createBusyBlockForUser,
@@ -20,6 +22,7 @@ import { getLocalizedErrorMessage } from "@/lib/i18n";
 import { getUiPreferences } from "@/lib/preferences";
 import type { PreferredTime, VoteValue } from "@/lib/types";
 import { normalizeTimezone } from "@/lib/telegram";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 import { createErrorRedirect } from "@/lib/utils";
 
 function getString(formData: FormData, key: string) {
@@ -208,4 +211,43 @@ export async function toggleInlineBusyCellAction(formData: FormData) {
 
     redirectWithError(groupId2 ? `/groups/${groupId2}` : "/calendar", { error: message });
   }
+}
+
+export async function createCalendarEventAction(data: {
+  title: string;
+  activity_type: string;
+  date: string;       // "yyyy-MM-dd"
+  start_time: string; // "HH:mm"
+  end_time: string;   // "HH:mm"
+}): Promise<void> {
+  const user = await requireCurrentUser();
+  const tz = normalizeTimezone(user.timezone);
+  const starts_at = fromZonedTime(`${data.date}T${data.start_time}:00`, tz).toISOString();
+  const ends_at = fromZonedTime(`${data.date}T${data.end_time}:00`, tz).toISOString();
+
+  const admin = getAdminSupabase();
+  await admin.from("calendar_events").insert({
+    user_id: user.id,
+    title: data.title,
+    activity_type: data.activity_type,
+    starts_at,
+    ends_at,
+    energy_after: "medium",
+    dress_code: "casual",
+    is_flexible: true,
+    source: "manual",
+  });
+
+  revalidatePath("/calendar");
+}
+
+export async function deleteCalendarEventAction(eventId: string): Promise<void> {
+  const user = await requireCurrentUser();
+  const admin = getAdminSupabase();
+  await admin
+    .from("calendar_events")
+    .delete()
+    .eq("id", eventId)
+    .eq("user_id", user.id);
+  revalidatePath("/calendar");
 }
