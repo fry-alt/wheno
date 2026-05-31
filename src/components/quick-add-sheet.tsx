@@ -17,20 +17,34 @@ const ACTIVITY_TYPES = [
 export function QuickAddSheet({ onClose }: { onClose: () => void }) {
   const today = format(new Date(), "yyyy-MM-dd");
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     setPending(true);
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    await createCalendarEventAction({
-      title: fd.get("title") as string,
-      activity_type: fd.get("activity_type") as string,
-      date: fd.get("date") as string,
-      start_time: fd.get("start_time") as string,
-      end_time: fd.get("end_time") as string,
-    });
-    onClose();
+    try {
+      const form = e.currentTarget;
+      const fd = new FormData(form);
+      const start = fd.get("start_time") as string;
+      const end = fd.get("end_time") as string;
+      if (end <= start) {
+        setError("Время окончания должно быть позже начала");
+        return;
+      }
+      await createCalendarEventAction({
+        title: fd.get("title") as string,
+        activity_type: fd.get("activity_type") as string,
+        date: fd.get("date") as string,
+        start_time: start,
+        end_time: end,
+      });
+      onClose();
+    } catch {
+      setError("Не удалось сохранить. Попробуй ещё раз.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -79,6 +93,9 @@ export function QuickAddSheet({ onClose }: { onClose: () => void }) {
               className="flex-1 rounded-xl bg-[#111] px-4 py-3 text-sm text-white outline-none"
             />
           </div>
+          {error && (
+            <p className="text-xs text-red-400">{error}</p>
+          )}
           <button
             type="submit"
             disabled={pending}
