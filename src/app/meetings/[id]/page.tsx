@@ -94,6 +94,7 @@ export default async function MeetingDetailPage({
               meetingId={meeting.id}
               option={option}
               timezone={user.timezone}
+              totalMembers={meeting.member_count}
             />
           ))}
         </div>

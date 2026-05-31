@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useState, type ReactNode } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
@@ -23,8 +23,6 @@ export function PreferenceControls({
   language: Language;
   theme: Theme;
   labels: {
-    themeLabel: string;
-    languageLabel: string;
     themeLight: string;
     themeDark: string;
     languageEnglish: string;
@@ -35,104 +33,73 @@ export function PreferenceControls({
   const [activeTheme, setActiveTheme] = useState(theme);
   const [activeLanguage, setActiveLanguage] = useState(language);
 
-  function refreshShell() {
-    startTransition(() => {
-      router.refresh();
-    });
+  function refresh() {
+    startTransition(() => router.refresh());
   }
 
-  function setTheme(nextTheme: Theme) {
-    if (nextTheme === activeTheme) {
-      return;
-    }
-
-    setActiveTheme(nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
-    writePreference(THEME_COOKIE_NAME, nextTheme);
-    refreshShell();
+  function setTheme(next: Theme) {
+    if (next === activeTheme) return;
+    setActiveTheme(next);
+    document.documentElement.dataset.theme = next;
+    writePreference(THEME_COOKIE_NAME, next);
+    refresh();
   }
 
-  function setLanguage(nextLanguage: Language) {
-    if (nextLanguage === activeLanguage) {
-      return;
-    }
-
-    setActiveLanguage(nextLanguage);
-    document.documentElement.lang = nextLanguage;
-    writePreference(LANGUAGE_COOKIE_NAME, nextLanguage);
-    refreshShell();
+  function setLanguage(next: Language) {
+    if (next === activeLanguage) return;
+    setActiveLanguage(next);
+    document.documentElement.lang = next;
+    writePreference(LANGUAGE_COOKIE_NAME, next);
+    refresh();
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <PreferenceGroup label={labels.themeLabel}>
-        <PreferenceButton
-          active={activeTheme === "light"}
-          label={labels.themeLight}
-          onClick={() => setTheme("light")}
-        />
-        <PreferenceButton
-          active={activeTheme === "dark"}
-          label={labels.themeDark}
-          onClick={() => setTheme("dark")}
-        />
-      </PreferenceGroup>
+    <div className="flex items-center gap-1">
+      {/* Language toggle */}
+      <div className="flex overflow-hidden rounded-lg border border-border/70 bg-card-muted text-xs font-semibold">
+        <ToggleButton active={activeLanguage === "en"} onClick={() => setLanguage("en")}>
+          {labels.languageEnglish}
+        </ToggleButton>
+        <ToggleButton active={activeLanguage === "ru"} onClick={() => setLanguage("ru")}>
+          {labels.languageRussian}
+        </ToggleButton>
+      </div>
 
-      <PreferenceGroup label={labels.languageLabel}>
-        <PreferenceButton
-          active={activeLanguage === "en"}
-          label={labels.languageEnglish}
-          onClick={() => setLanguage("en")}
-        />
-        <PreferenceButton
-          active={activeLanguage === "ru"}
-          label={labels.languageRussian}
-          onClick={() => setLanguage("ru")}
-        />
-      </PreferenceGroup>
+      {/* Theme toggle */}
+      <div className="flex overflow-hidden rounded-lg border border-border/70 bg-card-muted text-xs font-semibold">
+        <ToggleButton active={activeTheme === "light"} onClick={() => setTheme("light")}>
+          ☀
+        </ToggleButton>
+        <ToggleButton active={activeTheme === "dark"} onClick={() => setTheme("dark")}>
+          ☾
+        </ToggleButton>
+      </div>
     </div>
   );
 }
 
-function PreferenceGroup({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 rounded-full border border-white/14 bg-white/8 p-1 pr-2 text-background">
-      <p className="px-2 text-[0.64rem] font-semibold uppercase tracking-[0.22em] text-white/55">
-        {label}
-      </p>
-      <div className="flex gap-1">{children}</div>
-    </div>
-  );
-}
-
-function PreferenceButton({
+function ToggleButton({
   active,
-  label,
+  children,
   onClick,
 }: {
   active: boolean;
-  label: string;
+  children: React.ReactNode;
   onClick: () => void;
 }) {
   return (
     <button
       aria-pressed={active}
       className={cn(
-        "h-9 rounded-full px-3 text-sm font-semibold transition",
+        "h-7 px-2.5 transition",
         active
-          ? "bg-white text-slate-950 shadow-[0_16px_28px_-20px_rgba(255,255,255,0.7)]"
-          : "bg-transparent text-white/68 hover:bg-white/10 hover:text-white",
+          ? "bg-accent text-accent-foreground"
+          : "text-muted hover:bg-card-strong hover:text-foreground",
       )}
       onClick={onClick}
       type="button"
     >
-      {label}
+      {children}
     </button>
   );
 }

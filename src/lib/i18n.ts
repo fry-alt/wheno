@@ -26,6 +26,7 @@ export type AppErrorKey =
   | "busyBlock.noMatchingWeekdays"
   | "busyBlock.loadFailed"
   | "busyBlock.saveFailed"
+  | "busyBlock.toggleFailed"
   | "meeting.groupNotFound"
   | "meeting.ownerOnly"
   | "meeting.titleRequired"
@@ -277,6 +278,11 @@ export function getTranslations(language: Language) {
         availabilityEmptyDay: "Свободно",
         availabilityNoBlocks: "На этой неделе пока нет занятых интервалов.",
         availabilityBlocks: "блоков",
+        myAvailabilityTitle: "Моя занятость на этой неделе",
+        myAvailabilityHint: "Нажмите на ячейку, чтобы отметить или снять занятость.",
+        gridMorning: "Утро",
+        gridAfternoon: "День",
+        gridEvening: "Вечер",
         meetingRequestsTitle: "Запросы на встречу",
         noMeetingsTitle: "Пока нет запросов",
         noMeetingsOwnerDescription:
@@ -319,6 +325,9 @@ export function getTranslations(language: Language) {
         noOptionsDescription: "Для этого запроса пока не найдено подходящих слотов.",
         summary: (range: string, duration: number, participants: number) =>
           `${range} · ${duration} мин · минимум ${nouns.participants(participants)}`,
+        freeOf: (free: number, total: number) => `${free} из ${total} свободны`,
+        notifyMessage: (groupName: string, title: string, date: string, time: string) =>
+          `✅ <b>${groupName}</b>\nВстреча «${title}» назначена!\n📅 ${date}\n🕐 ${time}`,
       },
       session: {
         checkingProfile: "Проверяем ваш Telegram-профиль.",
@@ -377,6 +386,7 @@ export function getTranslations(language: Language) {
         "busyBlock.loadFailed": () =>
           "Пока не удалось загрузить ваши занятые интервалы.",
         "busyBlock.saveFailed": () => "Пока не удалось сохранить этот занятый интервал.",
+        "busyBlock.toggleFailed": () => "Не удалось обновить занятость. Попробуйте ещё раз.",
         "meeting.groupNotFound": () => "Не удалось найти эту группу.",
         "meeting.ownerOnly": () =>
           "Только владелец группы может создать запрос на встречу.",
@@ -553,6 +563,11 @@ export function getTranslations(language: Language) {
       availabilityEmptyDay: "Free",
       availabilityNoBlocks: "No busy blocks this week yet.",
       availabilityBlocks: "blocks",
+      myAvailabilityTitle: "My availability this week",
+      myAvailabilityHint: "Tap a cell to mark or unmark it as busy.",
+      gridMorning: "Morning",
+      gridAfternoon: "Afternoon",
+      gridEvening: "Evening",
       meetingRequestsTitle: "Meeting requests",
       noMeetingsTitle: "No meeting requests yet",
       noMeetingsOwnerDescription:
@@ -592,6 +607,9 @@ export function getTranslations(language: Language) {
       noOptionsDescription: "There are no candidate slots on this meeting request yet.",
       summary: (range: string, duration: number, participants: number) =>
         `${range} · ${duration} min · at least ${nouns.participants(participants)}`,
+      freeOf: (free: number, total: number) => `${free} of ${total} free`,
+      notifyMessage: (groupName: string, title: string, date: string, time: string) =>
+        `✅ <b>${groupName}</b>\nMeeting "${title}" scheduled!\n📅 ${date}\n🕐 ${time}`,
     },
     session: {
       checkingProfile: "Checking your Telegram profile.",
@@ -644,6 +662,7 @@ export function getTranslations(language: Language) {
         "No selected weekdays fall inside that date range.",
       "busyBlock.loadFailed": () => "We could not load your busy blocks yet.",
       "busyBlock.saveFailed": () => "We could not save that busy block yet.",
+      "busyBlock.toggleFailed": () => "Could not update availability. Please try again.",
       "meeting.groupNotFound": () => "We could not find that group.",
       "meeting.ownerOnly": () => "Only the group owner can create a meeting request.",
       "meeting.titleRequired": () => "Please give the meeting request a title.",

@@ -1,10 +1,12 @@
 import { randomInt } from "node:crypto";
-import { eachDayOfInterval, format, parseISO } from "date-fns";
+import { addDays, eachDayOfInterval, format, parseISO } from "date-fns";
 
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { getDateRangeUtc, toUtcDateFromLocalParts } from "@/lib/datetime";
-import { appError, type AppErrorKey } from "@/lib/i18n";
+import { formatSlotDateTime, getDateRangeUtc, toUtcDateFromLocalParts } from "@/lib/datetime";
+import { appError, getTranslations, type AppErrorKey } from "@/lib/i18n";
+import { notifyParticipants } from "@/lib/notify";
 import { calculateMeetingOptions } from "@/lib/scheduler";
+import type { Language } from "@/lib/preferences-shared";
 import type {
   AppUser,
   BusyBlockSummary,
@@ -953,10 +955,12 @@ export async function selectMeetingOptionForOwner({
   meetingId,
   optionId,
   userId,
+  language = "en",
 }: {
   meetingId: string;
   optionId: string;
   userId: string;
+  language?: Language;
 }) {
   const admin = getAdminSupabase();
   const meeting = await getMeetingForMemberAction(meetingId, userId);
@@ -981,5 +985,137 @@ export async function selectMeetingOptionForOwner({
 
   if (error) {
     throw appError("meeting.selectFailed");
+  }
+
+  // Notify all group members via bot DM (non-blocking, errors are logged not thrown)
+  try {
+    const { data: members } = await admin
+      .from("group_members")
+      .select("user:users(telegram_id)")
+      .eq("group_id", meeting.group_id);
+
+    if (members?.length) {
+      const copy = getTranslations(language);
+      const slot = formatSlotDateTime(option.start_at, option.end_at, "UTC", language);
+      const text = copy.meeting.notifyMessage(
+        meeting.group_name,
+        meeting.title,
+        slot.date,
+        slot.time,
+      );
+
+      const participants = (members as Array<{ user: { telegram_id: string } | Array<{ telegram_id: string }> | null }>)
+        .map((m) => (Array.isArray(m.user) ? m.user[0] : m.user))
+        .filter((u): u is { telegram_id: string } => u !== null && u !== undefined);
+
+      await notifyParticipants(participants, text);
+    }
+  } catch {
+    // Notification failure must not break slot selection
+  }
+}
+
+// ─── Inline availability grid ─────────────────────────────────────────────
+
+export type HalfDay = "morning" | "afternoon" | "evening";
+
+const HALF_DAY_TIMES: Record<HalfDay, { start: string; end: string }> = {
+  morning:   { start: "08:00", end: "12:00" },
+  afternoon: { start: "12:00", end: "17:00" },
+  evening:   { start: "17:00", end: "22:00" },
+};
+
+export interface InlineBusyCell {
+  date: string;   // "yyyy-MM-dd"
+  period: HalfDay;
+}
+
+export async function getInlineBusyCells(
+  userId: string,
+  weekStart: string,
+  timezone: string,
+): Promise<InlineBusyCell[]> {
+  const admin = getAdminSupabase();
+  const weekEnd = format(addDays(parseISO(weekStart), 6), "yyyy-MM-dd");
+  const { start, end } = getDateRangeUtc(weekStart, weekEnd, timezone);
+
+  const { data, error } = await admin
+    .from("busy_blocks")
+    .select("start_at, end_at")
+    .eq("user_id", userId)
+    .eq("source", "inline")
+    .lt("start_at", end.toISOString())
+    .gt("end_at", start.toISOString());
+
+  if (error) {
+    return [];
+  }
+
+  const cells: InlineBusyCell[] = [];
+  const days = eachDayOfInterval({ start: parseISO(weekStart), end: parseISO(weekEnd) });
+
+  for (const day of days) {
+    const date = format(day, "yyyy-MM-dd");
+
+    for (const [period, times] of Object.entries(HALF_DAY_TIMES) as [HalfDay, { start: string; end: string }][]) {
+      const cellStart = toUtcDateFromLocalParts(date, times.start, timezone);
+      const cellEnd   = toUtcDateFromLocalParts(date, times.end,   timezone);
+
+      const occupied = (data ?? []).some((block) => {
+        const bs = new Date(block.start_at as string);
+        const be = new Date(block.end_at as string);
+        return bs < cellEnd && be > cellStart;
+      });
+
+      if (occupied) {
+        cells.push({ date, period });
+      }
+    }
+  }
+
+  return cells;
+}
+
+export async function toggleInlineBusyCell(
+  userId: string,
+  date: string,
+  period: HalfDay,
+  timezone: string,
+  currentlyCells: InlineBusyCell[],
+): Promise<void> {
+  const admin = getAdminSupabase();
+  const times = HALF_DAY_TIMES[period];
+  const isBusy = currentlyCells.some((c) => c.date === date && c.period === period);
+
+  if (isBusy) {
+    const cellStart = toUtcDateFromLocalParts(date, times.start, timezone);
+    const cellEnd   = toUtcDateFromLocalParts(date, times.end,   timezone);
+
+    const { error } = await admin
+      .from("busy_blocks")
+      .delete()
+      .eq("user_id", userId)
+      .eq("source", "inline")
+      .gte("start_at", cellStart.toISOString())
+      .lte("end_at", cellEnd.toISOString());
+
+    if (error) {
+      throw appError("busyBlock.toggleFailed");
+    }
+  } else {
+    const startAt = toUtcDateFromLocalParts(date, times.start, timezone);
+    const endAt   = toUtcDateFromLocalParts(date, times.end,   timezone);
+
+    const { error } = await admin.from("busy_blocks").insert({
+      user_id:  userId,
+      title:    period,
+      start_at: startAt.toISOString(),
+      end_at:   endAt.toISOString(),
+      source:   "inline",
+    });
+
+    if (error) {
+      throw appError("busyBlock.toggleFailed");
+    }
   }
 }

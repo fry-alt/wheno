@@ -6,12 +6,17 @@ import { AppShell } from "@/components/app-shell";
 import { CopyInviteButton } from "@/components/copy-invite-button";
 import { EmptyState } from "@/components/empty-state";
 import { GroupAvailabilityCalendar } from "@/components/group-availability-calendar";
+import { InlineAvailabilityGrid } from "@/components/inline-availability-grid";
 import { MemberList } from "@/components/member-list";
 import { SessionBootstrap } from "@/components/session-bootstrap";
 import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
-import { getBusyBlocksForUsersInRange, getGroupDetailForUser } from "@/lib/db/queries";
+import {
+  getBusyBlocksForUsersInRange,
+  getGroupDetailForUser,
+  getInlineBusyCells,
+} from "@/lib/db/queries";
 import { formatDateWindow, getDateRangeUtc, getLocalDateValue } from "@/lib/datetime";
 import { getTranslations } from "@/lib/i18n";
 import { getUiPreferences } from "@/lib/preferences";
@@ -56,11 +61,15 @@ export default async function GroupDetailPage({
   const weekStart = getLocalDateValue(user.timezone);
   const weekEnd = format(addDays(parseISO(weekStart), 6), "yyyy-MM-dd");
   const { start, end } = getDateRangeUtc(weekStart, weekEnd, user.timezone);
-  const busyBlocks = await getBusyBlocksForUsersInRange({
-    userIds: group.members.map((member) => member.user_id),
-    startAt: start,
-    endAt: end,
-  });
+
+  const [busyBlocks, inlineCells] = await Promise.all([
+    getBusyBlocksForUsersInRange({
+      userIds: group.members.map((m) => m.user_id),
+      startAt: start,
+      endAt: end,
+    }),
+    getInlineBusyCells(user.id, weekStart, user.timezone),
+  ]);
 
   return (
     <AppShell
@@ -71,18 +80,19 @@ export default async function GroupDetailPage({
       user={user}
     >
       {error ? (
-        <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
+        <Card className="border-danger/40 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
 
-      <Card className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
+      {/* ── Invite card ── */}
+      <Card className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-widest text-muted">
               {copy.common.inviteCode}
             </p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-[0.22em] text-foreground">
+            <p className="mt-0.5 font-mono text-xl font-bold tracking-[0.25em] text-foreground">
               {group.invite_code}
-            </h3>
+            </p>
           </div>
           <CopyInviteButton
             inviteLink={inviteLink}
@@ -94,28 +104,42 @@ export default async function GroupDetailPage({
             }}
           />
         </div>
-        <p className="rounded-[22px] border border-border/60 bg-card-muted px-4 py-3 text-sm leading-7 text-muted">
+        <p className="rounded-xl bg-card-muted px-3 py-2 text-xs leading-relaxed text-muted">
           {copy.common.shareThisLink}:{" "}
           <span className="break-all font-medium text-foreground">{inviteLink}</span>
         </p>
       </Card>
 
-      <div className={`grid gap-3 ${isOwner ? "sm:grid-cols-2" : ""}`}>
+      {/* ── Quick actions ── */}
+      <div className={`grid gap-2 ${isOwner ? "grid-cols-2" : "grid-cols-1"}`}>
+        {isOwner ? (
+          <Link className={buttonStyles({ fullWidth: true })} href={`/groups/${group.id}/find-time`}>
+            {copy.group.findTime}
+          </Link>
+        ) : null}
         <Link
           className={buttonStyles({ fullWidth: true, variant: "secondary" })}
           href={`/availability/new?groupId=${group.id}`}
         >
           {copy.group.addBusyTime}
         </Link>
-        {isOwner ? (
-          <Link className={buttonStyles({ fullWidth: true })} href={`/groups/${group.id}/find-time`}>
-            {copy.group.findTime}
-          </Link>
-        ) : null}
       </div>
 
+      {/* ── Members ── */}
       <MemberList language={language} members={group.members} />
 
+      {/* ── My inline availability grid ── */}
+      <Card>
+        <InlineAvailabilityGrid
+          copy={copy.group}
+          groupId={group.id}
+          initialCells={inlineCells}
+          language={language}
+          weekStart={weekStart}
+        />
+      </Card>
+
+      {/* ── Group availability overview ── */}
       <GroupAvailabilityCalendar
         blocks={busyBlocks}
         copy={copy.group}
@@ -125,35 +149,38 @@ export default async function GroupDetailPage({
         weekStart={weekStart}
       />
 
+      {/* ── Meeting requests ── */}
       {group.meeting_requests.length ? (
         <Card>
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-foreground">
-              {copy.group.meetingRequestsTitle}
-            </h3>
-            <span className="text-sm text-muted">
+          <div className="flex items-center justify-between pb-3">
+            <h3 className="font-semibold text-foreground">{copy.group.meetingRequestsTitle}</h3>
+            <span className="text-xs text-muted">
               {group.meeting_requests.length} {copy.common.total}
             </span>
           </div>
-          <div className="mt-4 space-y-3">
+          <div className="space-y-2">
             {group.meeting_requests.map((meeting) => (
               <Link
-                className="block rounded-[24px] border border-border/60 bg-card-muted px-4 py-4 transition duration-200 hover:bg-card-strong"
+                className="flex items-start justify-between gap-3 rounded-xl border border-border/50 bg-card-muted px-3 py-3 transition-colors hover:bg-card-strong"
                 href={`/meetings/${meeting.id}`}
                 key={meeting.id}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-foreground">{meeting.title}</p>
-                    <p className="mt-1 text-sm text-muted">
-                      {formatDateWindow(meeting.date_from, meeting.date_to, language)} ·{" "}
-                      {meeting.duration_minutes} {copy.common.minuteShort}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-card-strong px-3 py-1 text-xs font-semibold text-muted ring-1 ring-border/80">
-                    {meeting.status === "selected" ? copy.common.selected : copy.common.open}
-                  </span>
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-foreground">{meeting.title}</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {formatDateWindow(meeting.date_from, meeting.date_to, language)} ·{" "}
+                    {meeting.duration_minutes} {copy.common.minuteShort}
+                  </p>
                 </div>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold ${
+                    meeting.status === "selected"
+                      ? "bg-success-soft text-success"
+                      : "bg-card-strong text-muted"
+                  }`}
+                >
+                  {meeting.status === "selected" ? copy.common.selected : copy.common.open}
+                </span>
               </Link>
             ))}
           </div>
@@ -163,9 +190,7 @@ export default async function GroupDetailPage({
           actionHref={isOwner ? `/groups/${group.id}/find-time` : undefined}
           actionLabel={isOwner ? copy.group.createMeetingRequest : undefined}
           description={
-            isOwner
-              ? copy.group.noMeetingsOwnerDescription
-              : copy.group.noMeetingsMemberDescription
+            isOwner ? copy.group.noMeetingsOwnerDescription : copy.group.noMeetingsMemberDescription
           }
           title={copy.group.noMeetingsTitle}
         />

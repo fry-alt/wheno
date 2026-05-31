@@ -9,13 +9,17 @@ import {
   createWeeklyBusyBlocksForUser,
   createGroupForUser,
   createMeetingRequestWithOptions,
+  getInlineBusyCells,
   joinGroupByInviteCode,
   saveVoteForOption,
   selectMeetingOptionForOwner,
+  toggleInlineBusyCell,
+  type HalfDay,
 } from "@/lib/db/queries";
 import { getLocalizedErrorMessage } from "@/lib/i18n";
 import { getUiPreferences } from "@/lib/preferences";
 import type { PreferredTime, VoteValue } from "@/lib/types";
+import { normalizeTimezone } from "@/lib/telegram";
 import { createErrorRedirect } from "@/lib/utils";
 
 function getString(formData: FormData, key: string) {
@@ -172,6 +176,7 @@ export async function selectMeetingOptionAction(formData: FormData) {
       meetingId,
       optionId: getString(formData, "optionId"),
       userId: user.id,
+      language,
     });
 
     revalidatePath(`/meetings/${meetingId}`);
@@ -180,5 +185,27 @@ export async function selectMeetingOptionAction(formData: FormData) {
     const message = getLocalizedErrorMessage(error, language, "meeting.selectFailed");
 
     redirectWithError(`/meetings/${meetingId}`, { error: message });
+  }
+}
+
+export async function toggleInlineBusyCellAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const { language } = await getUiPreferences();
+  const date   = getString(formData, "date");
+  const period = getString(formData, "period") as HalfDay;
+  const groupId = getString(formData, "groupId");
+
+  try {
+    const timezone = normalizeTimezone(user.timezone);
+    const currentCells = await getInlineBusyCells(user.id, getString(formData, "weekStart"), timezone);
+
+    await toggleInlineBusyCell(user.id, date, period, timezone, currentCells);
+
+    revalidatePath(groupId ? `/groups/${groupId}` : "/calendar");
+  } catch (error) {
+    const message = getLocalizedErrorMessage(error, language, "busyBlock.toggleFailed");
+    const groupId2 = getString(formData, "groupId");
+
+    redirectWithError(groupId2 ? `/groups/${groupId2}` : "/calendar", { error: message });
   }
 }
