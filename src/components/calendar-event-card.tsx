@@ -24,8 +24,9 @@ export function CalendarEventCard({
   timezone: string;
 }) {
   const [offset, setOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const startX = useRef<number | null>(null);
-  const dragging = useRef(false);
 
   const startTime = formatInTimeZone(event.starts_at, timezone, "HH:mm");
   const endTime = formatInTimeZone(event.ends_at, timezone, "HH:mm");
@@ -33,17 +34,17 @@ export function CalendarEventCard({
 
   function onTouchStart(e: React.TouchEvent) {
     startX.current = e.touches[0].clientX;
-    dragging.current = true;
+    setIsDragging(true);
   }
 
   function onTouchMove(e: React.TouchEvent) {
-    if (!dragging.current || startX.current === null) return;
+    if (startX.current === null) return;
     const dx = startX.current - e.touches[0].clientX;
     setOffset(Math.max(0, Math.min(dx, SWIPE_REVEAL)));
   }
 
   function onTouchEnd() {
-    dragging.current = false;
+    setIsDragging(false);
     startX.current = null;
     setOffset((prev) => (prev >= SWIPE_THRESHOLD ? SWIPE_REVEAL : 0));
   }
@@ -60,7 +61,11 @@ export function CalendarEventCard({
         </button>
         <button
           className="flex-1 bg-red-600 text-sm"
-          onClick={async () => { await deleteCalendarEventAction(event.id); }}
+          disabled={deleting}
+          onClick={async () => {
+            setDeleting(true);
+            await deleteCalendarEventAction(event.id);
+          }}
         >
           🗑️
         </button>
@@ -70,7 +75,7 @@ export function CalendarEventCard({
       <div
         style={{
           transform: `translateX(-${offset}px)`,
-          transition: dragging.current ? "none" : "transform 0.2s ease",
+          transition: isDragging ? "none" : "transform 0.2s ease",
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
