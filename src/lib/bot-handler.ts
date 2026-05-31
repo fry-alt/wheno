@@ -1,11 +1,11 @@
-import { addDays, format } from "date-fns";
+import { addDays, addMinutes, format, parseISO, setHours, setMinutes } from "date-fns";
 import type OpenAI from "openai";
 
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { processMessage, type CalendarContext, type ParsedEvent } from "@/lib/openai";
 import { normalizeTimezone } from "@/lib/telegram";
-import { upsertTelegramUser } from "@/lib/db/queries";
+import { upsertTelegramUser, createReminder } from "@/lib/db/queries";
 import type { TelegramProfile } from "@/lib/types";
 
 // ─── Telegram sender ──────────────────────────────────────────────────────────
@@ -28,6 +28,36 @@ export async function sendMessage(
       ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     }),
   });
+}
+
+// ─── Event card builder ───────────────────────────────────────────────────────
+
+function buildEventCard(
+  eventId: string,
+  title: string,
+  localDate: string,
+  startTime: string,
+  endTime: string,
+  energyAfter: string,
+  dressCode: string,
+  lang: "ru" | "en",
+): { text: string; reply_markup: object } {
+  const energyEmoji: Record<string, string> = { low: "🔋", medium: "⚡", high: "✨" };
+  const dressEmoji: Record<string, string> = { athletic: "👟", casual: "👕", smart: "👔", formal: "🎩" };
+
+  const text = lang === "ru"
+    ? `✅ <b>${title}</b> добавлен\n📅 ${localDate} · ${startTime}–${endTime}\n${energyEmoji[energyAfter] ?? ""} ${energyAfter} · ${dressEmoji[dressCode] ?? ""} ${dressCode}`
+    : `✅ <b>${title}</b> added\n📅 ${localDate} · ${startTime}–${endTime}\n${energyEmoji[energyAfter] ?? ""} ${energyAfter} · ${dressEmoji[dressCode] ?? ""} ${dressCode}`;
+
+  const reply_markup = {
+    inline_keyboard: [[
+      { text: "🔔 Напомнить", callback_data: `remind:${eventId}` },
+      { text: "✏️ Изменить", callback_data: `edit:${eventId}` },
+      { text: "🗑️ Удалить", callback_data: `delete:${eventId}` },
+    ]],
+  };
+
+  return { text, reply_markup };
 }
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
@@ -256,44 +286,48 @@ export async function handleBotMessage(update: {
 
       if (saved) {
         const tz = normalizeTimezone(user.timezone);
-        const localDate = formatInTimeZone(
-          fromZonedTime(`${event.date}T${event.start_time}:00`, tz),
-          tz, "EEE d MMM",
-        );
+        const startUtc = fromZonedTime(`${event.date}T${event.start_time}:00`, tz);
+        const localDate = formatInTimeZone(startUtc, tz, "EEE d MMM");
 
-        const energyEmoji: Record<string, string> = {
-          low: "🔋", medium: "⚡", high: "✨",
-        };
-        const dressEmoji: Record<string, string> = {
-          athletic: "👟", casual: "👕", smart: "👔", formal: "🎩",
-        };
+        // Get the saved event's ID
+        const admin = getAdminSupabase();
+        const { data: rows } = await admin
+          .from("calendar_events")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("title", event.title)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const eventId = (rows?.[0] as { id: string } | undefined)?.id ?? "";
 
-        botReply = lang === "ru"
-          ? `✅ <b>${event.title}</b> добавлен\n📅 ${localDate}, ${event.start_time}–${event.end_time}${event.location ? `\n📍 ${event.location}` : ""}\n${energyEmoji[event.energy_after] ?? ""} Энергия после: ${event.energy_after} · ${dressEmoji[event.dress_code] ?? ""} ${event.dress_code}`
-          : `✅ <b>${event.title}</b> added\n📅 ${localDate}, ${event.start_time}–${event.end_time}${event.location ? `\n📍 ${event.location}` : ""}\n${energyEmoji[event.energy_after] ?? ""} Energy after: ${event.energy_after} · ${dressEmoji[event.dress_code] ?? ""} ${event.dress_code}`;
-
-        // Proactive conflict check
+        // Conflict warning
+        let warning = "";
         const conflictsAfter = upcoming.filter((e) => {
           const eStart = new Date(e.starts_at);
           const eventEnd = fromZonedTime(`${event.date}T${event.end_time}:00`, normalizeTimezone(user.timezone));
           const diffMin = (eStart.getTime() - eventEnd.getTime()) / 60000;
           return diffMin > 0 && diffMin < 90 &&
             event.energy_after === "low" &&
-            ["dinner","lunch","coffee","drinks","bar","party","concert","theatre"].includes(
-              (e as { title: string; starts_at: string; ends_at: string; energy_after: string | null; dress_code: string | null; location: string | null }).title.toLowerCase(),
-            );
+            ["dinner","lunch","coffee","drinks","bar","party","concert","theatre"].includes(e.title.toLowerCase());
         });
-
         if (conflictsAfter.length) {
-          const warn = lang === "ru"
-            ? `\n\n⚠️ После этой активности у тебя ${conflictsAfter[0].title} — может быть тяжело, ты будешь уставшим.`
-            : `\n\n⚠️ You have ${conflictsAfter[0].title} right after — might be tough while tired.`;
-          botReply += warn;
+          warning = lang === "ru"
+            ? `\n\n⚠️ После — ${conflictsAfter[0].title}. Может быть тяжело.`
+            : `\n\n⚠️ You have ${conflictsAfter[0].title} right after — might be tough.`;
         }
+
+        const card = buildEventCard(
+          eventId, event.title, localDate,
+          event.start_time, event.end_time,
+          event.energy_after, event.dress_code, lang,
+        );
+        card.text += warning;
+
+        await saveMessage(user.id, "assistant", card.text);
+        await sendMessage(chatId, card.text, card.reply_markup);
+        return;
       } else {
-        botReply = lang === "ru"
-          ? "Не удалось сохранить событие, попробуй ещё раз."
-          : "Could not save the event, please try again.";
+        botReply = lang === "ru" ? "Не удалось сохранить событие." : "Could not save the event.";
       }
     } else if (toolCall.name === "save_onboarding_info") {
       const info = toolCall.args as unknown as {
@@ -319,5 +353,147 @@ export async function handleBotMessage(update: {
   if (botReply) {
     await saveMessage(user.id, "assistant", botReply);
     await sendMessage(chatId, botReply);
+  }
+}
+
+export async function handleCallbackQuery(callbackQuery: {
+  id: string;
+  from: { id: number; language_code?: string };
+  message?: { chat: { id: number }; message_id: number };
+  data?: string;
+}) {
+  const { getTelegramBotToken } = await import("@/lib/env");
+  const token = getTelegramBotToken();
+  const chatId = callbackQuery.message?.chat.id;
+  const data = callbackQuery.data ?? "";
+  const lang: "ru" | "en" = callbackQuery.from.language_code === "ru" ? "ru" : "en";
+
+  // Answer the callback to dismiss the loading spinner
+  await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: callbackQuery.id }),
+  });
+
+  if (!chatId) return;
+
+  // remind:<eventId> — show time picker
+  if (data.startsWith("remind:")) {
+    const eventId = data.slice(7);
+    const reply_markup = {
+      inline_keyboard: [
+        [
+          { text: "15 мин", callback_data: `remind_set:${eventId}:15` },
+          { text: "30 мин", callback_data: `remind_set:${eventId}:30` },
+          { text: "1 час", callback_data: `remind_set:${eventId}:60` },
+        ],
+        [
+          { text: "2 часа", callback_data: `remind_set:${eventId}:120` },
+          { text: "Утром", callback_data: `remind_set:${eventId}:morning` },
+        ],
+      ],
+    };
+    await sendMessage(chatId, lang === "ru" ? "🔔 За сколько напомнить?" : "🔔 How far in advance?", reply_markup);
+    return;
+  }
+
+  // remind_set:<eventId>:<minutes|morning>
+  if (data.startsWith("remind_set:")) {
+    const parts = data.split(":");
+    const eventId = parts[1];
+    const preset = parts[2];
+    const adminSupabase = getAdminSupabase();
+    const { data: rows } = await adminSupabase
+      .from("calendar_events")
+      .select("starts_at, title")
+      .eq("id", eventId)
+      .limit(1);
+    const calEvent = rows?.[0] as { starts_at: string; title: string } | undefined;
+    if (!calEvent) return;
+
+    const startsAt = parseISO(calEvent.starts_at);
+    let remindAt: Date;
+    let label: string;
+
+    if (preset === "morning") {
+      const morning = setMinutes(setHours(startsAt, 9), 0);
+      remindAt = morning > new Date() ? morning : addMinutes(startsAt, -60);
+      label = lang === "ru" ? "утром" : "in the morning";
+    } else {
+      const minutes = parseInt(preset, 10);
+      remindAt = addMinutes(startsAt, -minutes);
+      label = lang === "ru"
+        ? minutes < 60 ? `за ${minutes} мин` : `за ${minutes / 60} ч`
+        : minutes < 60 ? `${minutes} min before` : `${minutes / 60}h before`;
+    }
+
+    const { data: userRows } = await adminSupabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", String(callbackQuery.from.id))
+      .limit(1);
+    const userId = (userRows?.[0] as { id: string } | undefined)?.id;
+    if (!userId) return;
+
+    await createReminder({ userId, eventId, chatId, remindAt });
+
+    const timeStr = formatInTimeZone(remindAt, "UTC", "HH:mm");
+    await sendMessage(chatId, lang === "ru"
+      ? `🔔 Напомню ${label} (${timeStr})`
+      : `🔔 Reminder set ${label} (${timeStr})`);
+    return;
+  }
+
+  // delete:<eventId>
+  if (data.startsWith("delete:")) {
+    const eventId = data.slice(7);
+    const adminSupabase = getAdminSupabase();
+    const { data: rows } = await adminSupabase
+      .from("calendar_events")
+      .select("title")
+      .eq("id", eventId)
+      .limit(1);
+    const title = (rows?.[0] as { title: string } | undefined)?.title ?? "событие";
+    const reply_markup = {
+      inline_keyboard: [[
+        { text: lang === "ru" ? "✅ Удалить" : "✅ Delete", callback_data: `delete_confirm:${eventId}` },
+        { text: lang === "ru" ? "❌ Отмена" : "❌ Cancel", callback_data: "cancel" },
+      ]],
+    };
+    await sendMessage(chatId, lang === "ru" ? `Удалить «${title}»?` : `Delete "${title}"?`, reply_markup);
+    return;
+  }
+
+  // delete_confirm:<eventId>
+  if (data.startsWith("delete_confirm:")) {
+    const eventId = data.slice(15);
+    const adminSupabase = getAdminSupabase();
+    await adminSupabase.from("calendar_events").delete().eq("id", eventId);
+    await sendMessage(chatId, lang === "ru" ? "🗑️ Удалено." : "🗑️ Deleted.");
+    return;
+  }
+
+  // edit:<eventId>
+  if (data.startsWith("edit:")) {
+    const eventId = data.slice(5);
+    const adminSupabase = getAdminSupabase();
+    const { data: rows } = await adminSupabase
+      .from("calendar_events")
+      .select("title, starts_at, ends_at, location")
+      .eq("id", eventId)
+      .limit(1);
+    const ev = rows?.[0] as { title: string; starts_at: string; ends_at: string; location: string | null } | undefined;
+    if (!ev) return;
+    const startStr = formatInTimeZone(ev.starts_at, "UTC", "HH:mm");
+    const details = `«${ev.title}» · ${startStr}${ev.location ? ` · ${ev.location}` : ""}`;
+    await sendMessage(chatId, lang === "ru"
+      ? `Что изменить в ${details}?\nНапиши, например: «переставь на 19:00» или «добавь место — кофейня»`
+      : `What should I change in ${details}?\nE.g. "move to 7pm" or "add location — coffee shop"`);
+    return;
+  }
+
+  // cancel
+  if (data === "cancel") {
+    await sendMessage(chatId, lang === "ru" ? "Окей, отменено." : "Cancelled.");
   }
 }
