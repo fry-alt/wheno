@@ -226,7 +226,7 @@ export async function createCalendarEventAction(data: {
   const ends_at = fromZonedTime(`${data.date}T${data.end_time}:00`, tz).toISOString();
 
   const admin = getAdminSupabase();
-  await admin.from("calendar_events").insert({
+  const { error: insertError } = await admin.from("calendar_events").insert({
     user_id: user.id,
     title: data.title,
     activity_type: data.activity_type,
@@ -237,6 +237,7 @@ export async function createCalendarEventAction(data: {
     is_flexible: true,
     source: "manual",
   });
+  if (insertError) throw new Error(insertError.message);
 
   revalidatePath("/calendar");
 }
@@ -244,10 +245,11 @@ export async function createCalendarEventAction(data: {
 export async function deleteCalendarEventAction(eventId: string): Promise<void> {
   const user = await requireCurrentUser();
   const admin = getAdminSupabase();
-  await admin
+  const { error: deleteError } = await admin
     .from("calendar_events")
     .delete()
     .eq("id", eventId)
     .eq("user_id", user.id);
+  if (deleteError) throw new Error(deleteError.message);
   revalidatePath("/calendar");
 }
