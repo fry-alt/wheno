@@ -41,6 +41,11 @@ describe("filterEventsByTab", () => {
   it("filters sport", () => expect(filterEventsByTab(events, "sport")).toHaveLength(1));
   it("filters social", () => expect(filterEventsByTab(events, "social")).toHaveLength(1));
   it("filters work", () => expect(filterEventsByTab(events, "work")).toHaveLength(1));
+  it("includes null activity_type in 'all' but not in specific tabs", () => {
+    const nullEvent = makeEvent({ activity_type: null });
+    expect(filterEventsByTab([nullEvent], "all")).toHaveLength(1);
+    expect(filterEventsByTab([nullEvent], "sport")).toHaveLength(0);
+  });
 });
 
 describe("getActivityEmoji", () => {

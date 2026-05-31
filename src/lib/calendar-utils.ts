@@ -8,7 +8,7 @@ export const ACTIVITY_GROUPS: Record<string, ActivityGroup> = {
   cycling: "sport", yoga: "sport", sport: "sport",
   dinner: "social", lunch: "social", coffee: "social", drinks: "social",
   bar: "social", party: "social", concert: "social", theatre: "social",
-  cinema: "social", event: "social",
+  cinema: "social", event: "social", rest: "social", sleep: "social", travel: "social",
   work: "work", meeting: "work", conference: "work", call: "work",
 };
 
