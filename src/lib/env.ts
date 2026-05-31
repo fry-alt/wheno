@@ -28,6 +28,14 @@ export function getTelegramBotToken() {
   return getRequiredEnv("TELEGRAM_BOT_TOKEN");
 }
 
+export function getOpenAiApiKey() {
+  return getRequiredEnv("OPENAI_API_KEY");
+}
+
+export function getTelegramWebhookSecret() {
+  return getRequiredEnv("TELEGRAM_WEBHOOK_SECRET", "");
+}
+
 export function getAppUrl() {
   return getRequiredEnv("NEXT_PUBLIC_APP_URL", "http://localhost:3000").replace(
     /\/$/,
