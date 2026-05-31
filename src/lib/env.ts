@@ -46,3 +46,7 @@ export function getAppUrl() {
 export function isProduction() {
   return process.env.NODE_ENV === "production";
 }
+
+export function getCronSecret() {
+  return getRequiredEnv("CRON_SECRET", "");
+}
