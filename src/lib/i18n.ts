@@ -31,6 +31,9 @@ export type AppErrorKey =
   | "reminder.saveFailed"
   | "reminder.loadFailed"
   | "reminder.markSentFailed"
+  | "voice.saveFailed"
+  | "voice.loadFailed"
+  | "voice.deleteFailed"
   | "meeting.groupNotFound"
   | "meeting.ownerOnly"
   | "meeting.titleRequired"
@@ -395,6 +398,9 @@ export function getTranslations(language: Language) {
         "reminder.saveFailed": () => "Не удалось сохранить напоминание.",
         "reminder.loadFailed": () => "Не удалось загрузить напоминания.",
         "reminder.markSentFailed": () => "Не удалось обновить напоминание.",
+        "voice.saveFailed": () => "Не удалось сохранить голосовое сообщение.",
+        "voice.loadFailed": () => "Не удалось загрузить голосовое сообщение.",
+        "voice.deleteFailed": () => "Не удалось удалить голосовое сообщение.",
         "meeting.groupNotFound": () => "Не удалось найти эту группу.",
         "meeting.ownerOnly": () =>
           "Только владелец группы может создать запрос на встречу.",
@@ -675,6 +681,9 @@ export function getTranslations(language: Language) {
       "reminder.saveFailed": () => "Could not save the reminder.",
       "reminder.loadFailed": () => "Could not load reminders.",
       "reminder.markSentFailed": () => "Could not update reminder.",
+      "voice.saveFailed": () => "Could not save voice transcription.",
+      "voice.loadFailed": () => "Could not load voice transcription.",
+      "voice.deleteFailed": () => "Could not delete voice transcription.",
       "meeting.groupNotFound": () => "We could not find that group.",
       "meeting.ownerOnly": () => "Only the group owner can create a meeting request.",
       "meeting.titleRequired": () => "Please give the meeting request a title.",

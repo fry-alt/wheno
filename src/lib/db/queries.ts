@@ -1213,7 +1213,7 @@ export async function savePendingVoice(userId: string, transcription: string): P
     },
     { onConflict: "user_id" },
   );
-  if (error) throw appError("reminder.saveFailed");
+  if (error) throw appError("voice.saveFailed");
 }
 
 export async function getPendingVoice(userId: string): Promise<string | null> {
@@ -1224,7 +1224,7 @@ export async function getPendingVoice(userId: string): Promise<string | null> {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (error) throw appError("reminder.loadFailed");
+  if (error) throw appError("voice.loadFailed");
   if (!data) return null;
 
   const typedData = data as { transcription: string; expires_at: string };
@@ -1238,5 +1238,5 @@ export async function getPendingVoice(userId: string): Promise<string | null> {
 export async function deletePendingVoice(userId: string): Promise<void> {
   const admin = getAdminSupabase();
   const { error } = await admin.from("pending_voice").delete().eq("user_id", userId);
-  if (error) throw appError("reminder.markSentFailed");
+  if (error) throw appError("voice.deleteFailed");
 }
