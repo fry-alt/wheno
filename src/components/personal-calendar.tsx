@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { addDays, format, isToday, parseISO } from "date-fns";
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import { CalendarEventCard } from "@/components/calendar-event-card";
 import { QuickAddSheet } from "@/components/quick-add-sheet";
 import { computeWeekStats, filterEventsByTab } from "@/lib/calendar-utils";
@@ -65,11 +65,7 @@ export function PersonalCalendar({
                 className="text-[10px] font-semibold uppercase tracking-wider"
                 style={{ color: selected ? "#666" : "#555" }}
               >
-                {formatInTimeZone(
-                  fromZonedTime(`${dayStr}T12:00:00`, timezone),
-                  timezone,
-                  "EEE",
-                )}
+                {format(day, "EEE")}
               </span>
               <span className="text-base font-bold" style={{ color: selected ? "#000" : "#fff" }}>
                 {format(day, "d")}
@@ -127,7 +123,7 @@ export function PersonalCalendar({
         +
       </button>
 
-      {showAdd && <QuickAddSheet onClose={() => setShowAdd(false)} />}
+      {showAdd && <QuickAddSheet onClose={() => setShowAdd(false)} timezone={timezone} />}
     </div>
   );
 }

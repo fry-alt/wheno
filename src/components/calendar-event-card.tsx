@@ -64,7 +64,13 @@ export function CalendarEventCard({
           disabled={deleting}
           onClick={async () => {
             setDeleting(true);
-            await deleteCalendarEventAction(event.id);
+            try {
+              await deleteCalendarEventAction(event.id);
+            } catch {
+              // error is swallowed — card will unmount on success via revalidatePath
+            } finally {
+              setDeleting(false);
+            }
           }}
         >
           🗑️

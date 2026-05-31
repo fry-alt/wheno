@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { createCalendarEventAction } from "@/lib/actions";
 
 const ACTIVITY_TYPES = [
@@ -14,8 +15,8 @@ const ACTIVITY_TYPES = [
   { value: "other", label: "📌 Другое" },
 ];
 
-export function QuickAddSheet({ onClose }: { onClose: () => void }) {
-  const today = format(new Date(), "yyyy-MM-dd");
+export function QuickAddSheet({ onClose, timezone }: { onClose: () => void; timezone: string }) {
+  const today = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
