@@ -9,6 +9,7 @@ export type AppErrorKey =
   | "group.membersLoadFailed"
   | "meeting.requestsLoadFailed"
   | "group.nameRequired"
+  | "group.nameTooLong"
   | "group.createFailed"
   | "group.ownerMembershipFailed"
   | "group.inviteCodeFailed"
@@ -17,7 +18,9 @@ export type AppErrorKey =
   | "group.inviteCodeInvalid"
   | "group.joinFailed"
   | "busyBlock.titleRequired"
+  | "busyBlock.titleTooLong"
   | "busyBlock.invalidDateRange"
+  | "busyBlock.dateRangeTooLarge"
   | "busyBlock.invalidTimeRange"
   | "busyBlock.weekdayRequired"
   | "busyBlock.noMatchingWeekdays"
@@ -26,8 +29,11 @@ export type AppErrorKey =
   | "meeting.groupNotFound"
   | "meeting.ownerOnly"
   | "meeting.titleRequired"
+  | "meeting.titleTooLong"
   | "meeting.invalidDateRange"
+  | "meeting.dateRangeTooLarge"
   | "meeting.invalidDuration"
+  | "meeting.durationTooLong"
   | "meeting.invalidParticipants"
   | "meeting.createFailed"
   | "meeting.busyBlocksLoadFailed"
@@ -346,6 +352,7 @@ export function getTranslations(language: Language) {
         "meeting.requestsLoadFailed": () =>
           "Пока не удалось загрузить запросы на встречу.",
         "group.nameRequired": () => "Пожалуйста, введите название группы.",
+        "group.nameTooLong": () => "Название группы не должно превышать 80 символов.",
         "group.createFailed": () => "Пока не удалось создать группу.",
         "group.ownerMembershipFailed": () =>
           "Группа создана, но не удалось добавить вас владельцем.",
@@ -357,8 +364,11 @@ export function getTranslations(language: Language) {
         "group.inviteCodeInvalid": () => "Такой код приглашения не найден.",
         "group.joinFailed": () => "Пока не удалось войти в группу.",
         "busyBlock.titleRequired": () => "Пожалуйста, назовите этот занятый интервал.",
+        "busyBlock.titleTooLong": () => "Название занятого интервала не должно превышать 80 символов.",
         "busyBlock.invalidDateRange": () =>
           "Конечная дата должна быть позже начальной.",
+        "busyBlock.dateRangeTooLarge": () =>
+          "Диапазон дат не должен превышать 365 дней.",
         "busyBlock.invalidTimeRange": () =>
           "Время окончания должно быть позже времени начала.",
         "busyBlock.weekdayRequired": () => "Выберите хотя бы один день недели.",
@@ -371,10 +381,15 @@ export function getTranslations(language: Language) {
         "meeting.ownerOnly": () =>
           "Только владелец группы может создать запрос на встречу.",
         "meeting.titleRequired": () => "Пожалуйста, введите название встречи.",
+        "meeting.titleTooLong": () => "Название встречи не должно превышать 80 символов.",
         "meeting.invalidDateRange": () =>
           "Конечная дата должна быть позже начальной.",
+        "meeting.dateRangeTooLarge": () =>
+          "Диапазон дат не должен превышать 90 дней.",
         "meeting.invalidDuration": () =>
           "Выберите длительность встречи больше нуля.",
+        "meeting.durationTooLong": () =>
+          "Длительность встречи не должна превышать 480 минут (8 часов).",
         "meeting.invalidParticipants": () =>
           "Минимум участников должен быть от 1 до размера группы.",
         "meeting.createFailed": () => "Пока не удалось создать запрос на встречу.",
@@ -609,6 +624,7 @@ export function getTranslations(language: Language) {
       "group.membersLoadFailed": () => "We could not load the group members yet.",
       "meeting.requestsLoadFailed": () => "We could not load the meeting requests yet.",
       "group.nameRequired": () => "Please give your group a name.",
+      "group.nameTooLong": () => "Group name must be 80 characters or fewer.",
       "group.createFailed": () => "We could not create your group yet.",
       "group.ownerMembershipFailed": () =>
         "The group was created, but we could not add you as the owner.",
@@ -619,7 +635,9 @@ export function getTranslations(language: Language) {
       "group.inviteCodeInvalid": () => "That invite code doesn't match any group.",
       "group.joinFailed": () => "We could not join that group yet.",
       "busyBlock.titleRequired": () => "Please name this busy block.",
+      "busyBlock.titleTooLong": () => "Busy block title must be 80 characters or fewer.",
       "busyBlock.invalidDateRange": () => "End date needs to be after the start date.",
+      "busyBlock.dateRangeTooLarge": () => "Date range must be 365 days or fewer.",
       "busyBlock.invalidTimeRange": () => "End time needs to be after the start time.",
       "busyBlock.weekdayRequired": () => "Choose at least one weekday.",
       "busyBlock.noMatchingWeekdays": () =>
@@ -629,8 +647,11 @@ export function getTranslations(language: Language) {
       "meeting.groupNotFound": () => "We could not find that group.",
       "meeting.ownerOnly": () => "Only the group owner can create a meeting request.",
       "meeting.titleRequired": () => "Please give the meeting request a title.",
+      "meeting.titleTooLong": () => "Meeting title must be 80 characters or fewer.",
       "meeting.invalidDateRange": () => "The end date needs to come after the start date.",
+      "meeting.dateRangeTooLarge": () => "Date range must be 90 days or fewer.",
       "meeting.invalidDuration": () => "Pick a meeting length longer than zero minutes.",
+      "meeting.durationTooLong": () => "Meeting duration must be 480 minutes (8 hours) or less.",
       "meeting.invalidParticipants": () =>
         "Minimum participants must be between 1 and your member count.",
       "meeting.createFailed": () => "We could not create the meeting request yet.",

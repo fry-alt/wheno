@@ -53,9 +53,15 @@ export function parseSessionCookie(value?: string | null) {
   }
 
   try {
-    return JSON.parse(
+    const payload = JSON.parse(
       Buffer.from(encodedPayload, "base64url").toString("utf8"),
     ) as SessionPayload;
+
+    if (Date.now() - payload.issuedAt > SESSION_MAX_AGE * 1000) {
+      return null;
+    }
+
+    return payload;
   } catch {
     return null;
   }

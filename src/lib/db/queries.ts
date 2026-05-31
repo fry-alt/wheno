@@ -137,7 +137,7 @@ export async function getGroupsForUser(userId: string) {
     return [] as GroupListItem[];
   }
 
-  const [{ data: members }, { data: meetings }] = await Promise.all([
+  const [membersResult, meetingsResult] = await Promise.all([
     admin.from("group_members").select("group_id").in("group_id", groupIds),
     admin
       .from("meeting_requests")
@@ -146,14 +146,21 @@ export async function getGroupsForUser(userId: string) {
       .eq("status", "open"),
   ]);
 
+  if (membersResult.error || meetingsResult.error) {
+    throw appError("groups.loadFailed");
+  }
+
+  const members = membersResult.data;
+  const meetings = meetingsResult.data;
+
   const memberCounts = new Map<string, number>();
   const meetingCounts = new Map<string, number>();
 
-  for (const row of members ?? []) {
+  for (const row of members) {
     memberCounts.set(row.group_id as string, (memberCounts.get(row.group_id as string) ?? 0) + 1);
   }
 
-  for (const row of meetings ?? []) {
+  for (const row of meetings) {
     meetingCounts.set(
       row.group_id as string,
       (meetingCounts.get(row.group_id as string) ?? 0) + 1,
@@ -316,12 +323,21 @@ export async function getGroupDetailForUser(groupId: string, userId: string) {
   } satisfies GroupDetail;
 }
 
+const MAX_NAME_LENGTH = 80;
+const MAX_MEETING_DURATION_MINUTES = 480;
+const MAX_MEETING_DATE_RANGE_DAYS = 90;
+const MAX_BUSY_DATE_RANGE_DAYS = 365;
+
 export async function createGroupForUser(userId: string, name: string) {
   const admin = getAdminSupabase();
   const trimmedName = name.trim();
 
   if (!trimmedName) {
     throw appError("group.nameRequired");
+  }
+
+  if (trimmedName.length > MAX_NAME_LENGTH) {
+    throw appError("group.nameTooLong");
   }
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -418,6 +434,10 @@ export async function createBusyBlockForUser({
     throw appError("busyBlock.titleRequired");
   }
 
+  if (trimmedTitle.length > MAX_NAME_LENGTH) {
+    throw appError("busyBlock.titleTooLong");
+  }
+
   const startAt = toUtcDateFromLocalParts(date, startTime, timezone);
   const endAt = toUtcDateFromLocalParts(date, endTime, timezone);
 
@@ -464,8 +484,20 @@ export async function createWeeklyBusyBlocksForUser({
     throw appError("busyBlock.titleRequired");
   }
 
+  if (trimmedTitle.length > MAX_NAME_LENGTH) {
+    throw appError("busyBlock.titleTooLong");
+  }
+
   if (endDate < startDate) {
     throw appError("busyBlock.invalidDateRange");
+  }
+
+  const rangeDays =
+    (parseISO(endDate).getTime() - parseISO(startDate).getTime()) /
+    (1000 * 60 * 60 * 24);
+
+  if (rangeDays > MAX_BUSY_DATE_RANGE_DAYS) {
+    throw appError("busyBlock.dateRangeTooLarge");
   }
 
   const uniqueWeekdays = Array.from(new Set(weekdays)).filter((weekday) => weekday >= 0 && weekday <= 6);
@@ -594,16 +626,34 @@ export async function createMeetingRequestWithOptions({
     throw appError("meeting.ownerOnly");
   }
 
-  if (!title.trim()) {
+  const trimmedTitle = title.trim();
+
+  if (!trimmedTitle) {
     throw appError("meeting.titleRequired");
+  }
+
+  if (trimmedTitle.length > MAX_NAME_LENGTH) {
+    throw appError("meeting.titleTooLong");
   }
 
   if (dateTo < dateFrom) {
     throw appError("meeting.invalidDateRange");
   }
 
+  const meetingRangeDays =
+    (parseISO(dateTo).getTime() - parseISO(dateFrom).getTime()) /
+    (1000 * 60 * 60 * 24);
+
+  if (meetingRangeDays > MAX_MEETING_DATE_RANGE_DAYS) {
+    throw appError("meeting.dateRangeTooLarge");
+  }
+
   if (durationMinutes <= 0) {
     throw appError("meeting.invalidDuration");
+  }
+
+  if (durationMinutes > MAX_MEETING_DURATION_MINUTES) {
+    throw appError("meeting.durationTooLong");
   }
 
   if (
@@ -619,7 +669,7 @@ export async function createMeetingRequestWithOptions({
     .insert({
       group_id: groupId,
       created_by: userId,
-      title: title.trim(),
+      title: trimmedTitle,
       date_from: dateFrom,
       date_to: dateTo,
       duration_minutes: durationMinutes,

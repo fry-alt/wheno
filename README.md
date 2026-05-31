@@ -4,146 +4,179 @@ A Telegram Mini App that helps groups find the best time to meet.
 
 ## Stack
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- Supabase
-- Telegram Mini App
-- `@telegram-apps/sdk-react`
-- `date-fns`
+- Next.js 16 App Router
+- TypeScript (strict)
+- Tailwind CSS v4
+- Supabase (Postgres + RLS, no Supabase Auth)
+- `@telegram-apps/sdk-react` + `@telegram-apps/init-data-node`
+- `date-fns` / `date-fns-tz`
+- Vitest (unit tests)
 
-## What this MVP includes
+## Features
 
-- Telegram Mini App bootstrap with `ready()` and expand behavior
-- Telegram init data handling with a server-side validation helper
-- Dev mode fallback outside Telegram with the fixed `dev-user` profile
+- Telegram Mini App bootstrap with `ready()` and viewport expand
+- Server-side Telegram init data validation (HMAC-SHA256 via `init-data-node`)
+- Signed session cookie (HMAC-SHA256, server-side expiry check)
 - Group creation and joining by invite code
-- Manual busy time entry
-- Meeting request creation with top 5 suggested slots
-- Voting on suggested slots
-- Final slot selection by the group owner
-- Supabase schema with RLS enabled and server-side data access only
+- Manual, quick-add, and weekly recurring busy time entry
+- Meeting request creation with top-5 suggested slots
+- Member voting on suggested slots
+- Final slot selection by group owner
+- Bilingual UI (English / Russian) with proper Russian pluralization
 
-## Architecture note
+---
 
-This MVP does not use Supabase Auth. Instead, it:
+## Session and auth architecture
 
-- reads Telegram Mini App data on the client
-- validates and upserts the user on the server
-- stores a signed app session cookie
-- performs database reads and writes on the server with the service role key
+This project does **not** use Supabase Auth. Instead:
 
-That keeps the `SUPABASE_SERVICE_ROLE_KEY` off the client while still letting us ship the requested flow quickly.
+1. The client reads Telegram Mini App `initData` via `@telegram-apps/sdk`.
+2. It posts the raw `initData` + browser timezone to `POST /api/session`.
+3. The server validates `initData` using HMAC-SHA256 against `TELEGRAM_BOT_TOKEN`.
+4. On success the server upserts the user in Supabase and sets a signed session cookie.
+5. All subsequent server actions and page loads read the cookie, verify the HMAC signature and check the `issuedAt` timestamp, then load the user from Supabase using the service role key.
+
+The `SUPABASE_SERVICE_ROLE_KEY` is **never** sent to the client — it exists only in server-side Next.js code.
+
+---
+
+## Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key (used only for client-side Supabase config; no direct DB access is made from the client) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Service role key — **server only**, never prefix with `NEXT_PUBLIC_` |
+| `TELEGRAM_BOT_TOKEN` | ✅ | Bot token from `@BotFather` — **server only** |
+| `NEXT_PUBLIC_APP_URL` | ✅ | Full URL of the deployed app, e.g. `https://wheno.vercel.app` |
+
+---
 
 ## Local setup
 
-1. Install dependencies:
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Copy `.env.example` to `.env.local`.
+### 2. Configure environment
 
-3. Fill in the environment variables:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-TELEGRAM_BOT_TOKEN=
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+```bash
+cp .env.example .env.local
 ```
 
-4. Create a Supabase project.
+Fill in all five variables in `.env.local`.
 
-5. Run [`supabase/schema.sql`](/C:/wheno/supabase/schema.sql) in the Supabase SQL editor.
+### 3. Create the Supabase schema
 
-6. Start the app:
+1. Create a Supabase project at [supabase.com](https://supabase.com).
+2. Open the SQL editor and run the full contents of [`supabase/schema.sql`](./supabase/schema.sql).
+
+The schema creates all tables, indexes, RLS policies, and revokes `anon`/`authenticated` access so only the service role can read or write data.
+
+### 4. Start the dev server
 
 ```bash
 npm run dev
 ```
 
-7. Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000).
 
-Outside Telegram, the app will use the dev fallback user:
+---
 
-- `telegram_id: dev-user`
-- `first_name: Dev`
-- `username: dev`
+## Testing outside Telegram (dev fallback)
 
-## Telegram bot setup
+When `NODE_ENV !== "production"` and no valid Telegram `initData` is present, the app authenticates with a fixed dev user:
 
-1. Create a bot in `@BotFather`.
-2. Save the bot token and put it in `TELEGRAM_BOT_TOKEN`.
-3. Configure your Mini App URL in `@BotFather`.
-   Telegram's official Mini App docs describe menu button and main Mini App setup:
-   - [Telegram Mini Apps](https://core.telegram.org/bots/webapps)
-   - [Mini Apps on Telegram](https://core.telegram.org/api/bots/webapps)
-4. Use your public app URL for production, or a tunnel URL for local Telegram testing.
+| Field | Value |
+|---|---|
+| `telegram_id` | `dev-user` |
+| `first_name` | `Dev` |
+| `username` | `dev` |
 
-For local Telegram testing, set:
+**This fallback is disabled in production.** In production, requests without valid Telegram credentials return a `400` error from `/api/session`.
 
-- `NEXT_PUBLIC_APP_URL=https://your-tunnel-url`
+---
 
-## Running inside Telegram
+## Testing inside Telegram
 
-When opened inside Telegram, the app:
+1. Create a bot in `@BotFather` and save the token in `TELEGRAM_BOT_TOKEN`.
+2. Use a tunnel (e.g. [ngrok](https://ngrok.com) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)) to expose your local server.
+3. Set `NEXT_PUBLIC_APP_URL=https://your-tunnel-url` in `.env.local`.
+4. Configure the Mini App URL in `@BotFather` to your tunnel URL.
+5. Open the Mini App from Telegram — init data will be validated end-to-end.
 
-1. reads Telegram Mini App init data
-2. posts it to `/api/session`
-3. validates the init data server-side with `TELEGRAM_BOT_TOKEN`
-4. creates or updates the user in Supabase
-5. stores a signed session cookie
+---
+
+## Running tests
+
+```bash
+npm test          # run all tests once
+npm run test:watch  # watch mode
+npm run check:i18n  # scan i18n.ts for mojibake encoding artifacts
+```
+
+---
 
 ## Main routes
 
-- `/` - home, session bootstrap, group list
-- `/groups/new` - create group
-- `/join` - join by invite code
-- `/groups/[id]` - group details, invite info, members, meeting requests
-- `/availability/new` - add manual busy block
-- `/groups/[id]/find-time` - create meeting request and calculate slots
-- `/meetings/[id]` - vote and select the final slot
+| Route | Description |
+|---|---|
+| `/` | Home — session bootstrap, group list |
+| `/groups/new` | Create a group |
+| `/join` | Join by invite code |
+| `/groups/[id]` | Group detail, invite code, member list, meeting requests |
+| `/availability/new` | Add a busy block (quick / manual / weekly) |
+| `/groups/[id]/find-time` | Create a meeting request and calculate slots |
+| `/meetings/[id]` | Vote on options, select the final slot |
+| `/calendar` | Personal busy-block calendar |
+
+---
 
 ## Scheduling logic
 
-The scheduler lives in [`src/lib/scheduler.ts`](/C:/wheno/src/lib/scheduler.ts).
+The scheduler (`src/lib/scheduler.ts`):
 
-It:
+- Generates 30-minute-step candidate slots within the requested window (08:00–22:00 local, or a narrower preferred-time window).
+- Converts all boundaries through `date-fns-tz` using each member's stored IANA timezone.
+- Checks each slot against every member's busy blocks using a standard overlap test (`busyStart < slotEnd && busyEnd > slotStart`).
+- Filters out slots where the number of free members is below `min_participants`.
+- Scores each slot: `freeCount × 10 + preferredTimeBonus(5) + weekendBonus(3) - latePenalty(5) - busyCount × 2`.
+- Returns the top 5 options sorted by score descending, then by start time ascending on ties.
 
-- generates 30-minute candidate slots
-- uses the requested date range and preferred time window
-- checks overlaps against every member's busy blocks
-- filters out slots below `min_participants`
-- scores each slot
-- returns the top 5 options
+---
 
 ## Supabase notes
 
 - RLS is enabled on all tables.
-- `anon` and `authenticated` access is revoked for the MVP tables.
-- The app currently uses server-side Supabase access only.
-- The service role key is never sent to the client.
+- `anon` and `authenticated` roles have **no** permissions — only the service role key can read or write.
+- The service role key is only used in `src/lib/supabase/admin.ts`, which is imported exclusively in server-side code.
+
+---
 
 ## Deployment to Vercel
 
 1. Push the project to GitHub.
-2. Import the repo into Vercel.
-3. Add the same environment variables in Vercel:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `TELEGRAM_BOT_TOKEN`
-   - `NEXT_PUBLIC_APP_URL`
+2. Import the repo in [Vercel](https://vercel.com).
+3. Add all five environment variables in the Vercel project settings.
 4. Deploy.
 5. Update the Mini App URL in `@BotFather` to your deployed domain.
 
-## Verification
+---
 
-Production build passes:
+## Production checklist
 
-```bash
-npm run build
-```
+Before going live, verify the following:
+
+- [ ] All five environment variables are set in the hosting environment.
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` and `TELEGRAM_BOT_TOKEN` are **not** prefixed with `NEXT_PUBLIC_`.
+- [ ] `NEXT_PUBLIC_APP_URL` matches the deployed domain exactly (no trailing slash).
+- [ ] The Supabase schema has been applied (`supabase/schema.sql`).
+- [ ] RLS is enabled on all tables and `anon`/`authenticated` access is revoked (the schema does this automatically).
+- [ ] `npm run build` passes with no TypeScript or ESLint errors.
+- [ ] `npm test` passes (8 scheduler unit tests).
+- [ ] `npm run check:i18n` passes (no mojibake in translation strings).
+- [ ] The Mini App URL in `@BotFather` matches `NEXT_PUBLIC_APP_URL`.
+- [ ] The app has been opened inside Telegram to verify end-to-end init data validation.
+- [ ] `NODE_ENV=production` is set (Vercel does this automatically).

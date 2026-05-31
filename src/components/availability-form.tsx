@@ -37,25 +37,13 @@ type AvailabilityCopy = {
   weekdays: string[];
 };
 
-const QUICK_PRESETS = {
-  lunch: {
-    title: "Lunch",
-    startTime: "12:00",
-    endTime: "13:00",
-  },
-  workday: {
-    title: "Work",
-    startTime: "09:00",
-    endTime: "17:00",
-  },
-  evening: {
-    title: "Evening plans",
-    startTime: "18:00",
-    endTime: "21:00",
-  },
+const QUICK_PRESET_TIMES = {
+  lunch: { startTime: "12:00", endTime: "13:00" },
+  workday: { startTime: "09:00", endTime: "17:00" },
+  evening: { startTime: "18:00", endTime: "21:00" },
 } as const;
 
-type QuickPreset = keyof typeof QUICK_PRESETS;
+type QuickPreset = keyof typeof QUICK_PRESET_TIMES;
 
 export function AvailabilityForm({
   copy,
@@ -72,7 +60,7 @@ export function AvailabilityForm({
 }) {
   const [mode, setMode] = useState<AvailabilityMode>("quick");
   const [quickPreset, setQuickPreset] = useState<QuickPreset>("evening");
-  const selectedPreset = QUICK_PRESETS[quickPreset];
+  const selectedPreset = QUICK_PRESET_TIMES[quickPreset];
   const defaultWeekday = useMemo(() => {
     const date = new Date(`${defaultDate}T00:00:00`);
     return Number.isNaN(date.getTime()) ? "1" : String(date.getDay());
@@ -101,7 +89,7 @@ export function AvailabilityForm({
             <div className="space-y-2">
               <p className="text-sm font-semibold text-foreground">{copy.quickPresetLabel}</p>
               <div className="grid gap-2 sm:grid-cols-3">
-                {Object.keys(QUICK_PRESETS).map((preset) => (
+                {(Object.keys(QUICK_PRESET_TIMES) as QuickPreset[]).map((preset) => (
                   <button
                     aria-pressed={quickPreset === preset}
                     className={cn(
@@ -111,16 +99,16 @@ export function AvailabilityForm({
                         : "bg-card text-foreground hover:bg-card-strong",
                     )}
                     key={preset}
-                    onClick={() => setQuickPreset(preset as QuickPreset)}
+                    onClick={() => setQuickPreset(preset)}
                     type="button"
                   >
-                    {copy.quickPresets[preset as QuickPreset]}
+                    {copy.quickPresets[preset]}
                   </button>
                 ))}
               </div>
             </div>
             <Input
-              defaultValue={selectedPreset.title}
+              defaultValue={copy.quickPresets[quickPreset]}
               id="quick-title"
               key={quickPreset}
               label={copy.titleLabel}
