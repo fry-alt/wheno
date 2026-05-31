@@ -19,6 +19,7 @@ import type {
   MeetingMemberIdentity,
   MeetingOptionDetail,
   MeetingRequestSummary,
+  PendingVoice,
   PreferredTime,
   Reminder,
   SchedulerBusyBlock,
@@ -1199,5 +1200,43 @@ export async function getPendingReminders(): Promise<
 export async function markReminderSent(id: string): Promise<void> {
   const admin = getAdminSupabase();
   const { error } = await admin.from("reminders").update({ sent: true }).eq("id", id);
+  if (error) throw appError("reminder.markSentFailed");
+}
+
+export async function savePendingVoice(userId: string, transcription: string): Promise<void> {
+  const admin = getAdminSupabase();
+  const { error } = await admin.from("pending_voice").upsert(
+    {
+      user_id: userId,
+      transcription,
+      expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  if (error) throw appError("reminder.saveFailed");
+}
+
+export async function getPendingVoice(userId: string): Promise<string | null> {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("pending_voice")
+    .select("transcription, expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw appError("reminder.loadFailed");
+  if (!data) return null;
+
+  const typedData = data as { transcription: string; expires_at: string };
+  if (new Date(typedData.expires_at) < new Date()) {
+    await admin.from("pending_voice").delete().eq("user_id", userId);
+    return null;
+  }
+  return typedData.transcription;
+}
+
+export async function deletePendingVoice(userId: string): Promise<void> {
+  const admin = getAdminSupabase();
+  const { error } = await admin.from("pending_voice").delete().eq("user_id", userId);
   if (error) throw appError("reminder.markSentFailed");
 }

@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-import { getOpenAiApiKey } from "@/lib/env";
+import { getOpenAiApiKey, getTelegramBotToken } from "@/lib/env";
 
 let client: OpenAI | null = null;
 
@@ -204,4 +204,32 @@ Keep replies short — this is a chat, not an email.`;
     reply: choice.message.content ?? "...",
     toolCall: null,
   };
+}
+
+export async function transcribeVoice(fileId: string): Promise<string> {
+  const token = getTelegramBotToken();
+
+  // 1. Get file path from Telegram
+  const fileRes = await fetch(
+    `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`,
+  );
+  const fileJson = (await fileRes.json()) as { result: { file_path: string } };
+  const filePath = fileJson.result.file_path;
+
+  // 2. Download OGG audio
+  const audioRes = await fetch(
+    `https://api.telegram.org/file/bot${token}/${filePath}`,
+  );
+  const audioBuffer = await audioRes.arrayBuffer();
+
+  // 3. Transcribe with Whisper
+  const openai = getOpenAI();
+  const file = new File([audioBuffer], "voice.ogg", { type: "audio/ogg" });
+  const result = await openai.audio.transcriptions.create({
+    file,
+    model: "whisper-1",
+    language: "ru",
+  });
+
+  return result.text;
 }

@@ -175,3 +175,9 @@ export type Reminder = {
   sent: boolean;
   created_at: string;
 };
+
+export type PendingVoice = {
+  user_id: string;
+  transcription: string;
+  expires_at: string;
+};
