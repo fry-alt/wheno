@@ -3,8 +3,7 @@ import type OpenAI from "openai";
 
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
-import { processMessage, type CalendarContext, type ParsedEvent } from "@/lib/openai";
-import { transcribeVoice } from "@/lib/openai";
+import { processMessage, transcribeVoice, type CalendarContext, type ParsedEvent } from "@/lib/openai";
 import { normalizeTimezone } from "@/lib/telegram";
 import { upsertTelegramUser, createReminder, savePendingVoice, getPendingVoice, deletePendingVoice } from "@/lib/db/queries";
 import type { TelegramProfile } from "@/lib/types";
@@ -571,8 +570,16 @@ export async function handleCallbackQuery(callbackQuery: {
     return;
   }
 
-  // voice_edit — ask for corrected text
+  // voice_edit — delete pending voice, ask for corrected text
   if (data === "voice_edit") {
+    const admin = getAdminSupabase();
+    const { data: userRows } = await admin
+      .from("users")
+      .select("id")
+      .eq("telegram_id", String(callbackQuery.from.id))
+      .limit(1);
+    const userId = (userRows?.[0] as { id: string } | undefined)?.id;
+    if (userId) await deletePendingVoice(userId);
     await sendMessage(chatId, lang === "ru"
       ? "Напиши исправленный вариант текстом:"
       : "Type the corrected version:");
