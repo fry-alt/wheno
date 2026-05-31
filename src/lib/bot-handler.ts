@@ -2,7 +2,7 @@ import { addDays, addMinutes, format, parseISO, setHours, setMinutes } from "dat
 import type OpenAI from "openai";
 
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { processMessage, type CalendarContext, type ParsedEvent } from "@/lib/openai";
 import { normalizeTimezone } from "@/lib/telegram";
 import { upsertTelegramUser, createReminder } from "@/lib/db/queries";
@@ -51,9 +51,9 @@ function buildEventCard(
 
   const reply_markup = {
     inline_keyboard: [[
-      { text: "🔔 Напомнить", callback_data: `remind:${eventId}` },
-      { text: "✏️ Изменить", callback_data: `edit:${eventId}` },
-      { text: "🗑️ Удалить", callback_data: `delete:${eventId}` },
+      { text: lang === "ru" ? "🔔 Напомнить" : "🔔 Remind", callback_data: `remind:${eventId}` },
+      { text: lang === "ru" ? "✏️ Изменить" : "✏️ Edit", callback_data: `edit:${eventId}` },
+      { text: lang === "ru" ? "🗑️ Удалить" : "🗑️ Delete", callback_data: `delete:${eventId}` },
     ]],
   };
 
@@ -415,8 +415,20 @@ export async function handleCallbackQuery(callbackQuery: {
     let remindAt: Date;
     let label: string;
 
+    const { data: userRows } = await adminSupabase
+      .from("users")
+      .select("id, timezone")
+      .eq("telegram_id", String(callbackQuery.from.id))
+      .limit(1);
+    const userId = (userRows?.[0] as { id: string; timezone: string } | undefined)?.id;
+    const userTz = normalizeTimezone((userRows?.[0] as { id: string; timezone: string } | undefined)?.timezone ?? "Europe/Moscow");
+    if (!userId) return;
+
     if (preset === "morning") {
-      const morning = setMinutes(setHours(startsAt, 9), 0);
+      // Build 09:00 in the user's local timezone on the event day
+      const eventDayLocal = toZonedTime(startsAt, userTz);
+      const morningLocal = setMinutes(setHours(eventDayLocal, 9), 0);
+      const morning = fromZonedTime(morningLocal, userTz);
       remindAt = morning > new Date() ? morning : addMinutes(startsAt, -60);
       label = lang === "ru" ? "утром" : "in the morning";
     } else {
@@ -427,17 +439,9 @@ export async function handleCallbackQuery(callbackQuery: {
         : minutes < 60 ? `${minutes} min before` : `${minutes / 60}h before`;
     }
 
-    const { data: userRows } = await adminSupabase
-      .from("users")
-      .select("id")
-      .eq("telegram_id", String(callbackQuery.from.id))
-      .limit(1);
-    const userId = (userRows?.[0] as { id: string } | undefined)?.id;
-    if (!userId) return;
-
     await createReminder({ userId, eventId, chatId, remindAt });
 
-    const timeStr = formatInTimeZone(remindAt, "UTC", "HH:mm");
+    const timeStr = formatInTimeZone(remindAt, userTz, "HH:mm");
     await sendMessage(chatId, lang === "ru"
       ? `🔔 Напомню ${label} (${timeStr})`
       : `🔔 Reminder set ${label} (${timeStr})`);
@@ -468,7 +472,22 @@ export async function handleCallbackQuery(callbackQuery: {
   if (data.startsWith("delete_confirm:")) {
     const eventId = data.slice(15);
     const adminSupabase = getAdminSupabase();
-    await adminSupabase.from("calendar_events").delete().eq("id", eventId);
+
+    // Look up userId from telegram_id
+    const { data: userRows } = await adminSupabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", String(callbackQuery.from.id))
+      .limit(1);
+    const userId = (userRows?.[0] as { id: string } | undefined)?.id;
+    if (!userId) return;
+
+    // Delete only if owned by this user
+    await adminSupabase
+      .from("calendar_events")
+      .delete()
+      .eq("id", eventId)
+      .eq("user_id", userId);
     await sendMessage(chatId, lang === "ru" ? "🗑️ Удалено." : "🗑️ Deleted.");
     return;
   }
