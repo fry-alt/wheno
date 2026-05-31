@@ -149,3 +149,19 @@ export interface MeetingDetail {
   member_count: number;
   options: MeetingOptionDetail[];
 }
+
+export type CalendarEvent = {
+  id: string;
+  user_id: string;
+  title: string;
+  activity_type: string | null;
+  starts_at: string;
+  ends_at: string;
+  location: string | null;
+  energy_after: "high" | "medium" | "low" | null;
+  dress_code: "athletic" | "casual" | "smart" | "formal" | null;
+  is_flexible: boolean;
+  notes: string | null;
+  source: string;
+  created_at: string;
+};

@@ -10,6 +10,7 @@ import type { Language } from "@/lib/preferences-shared";
 import type {
   AppUser,
   BusyBlockSummary,
+  CalendarEvent,
   GroupDetail,
   GroupBusyBlockSummary,
   GroupListItem,
@@ -1118,4 +1119,24 @@ export async function toggleInlineBusyCell(
       throw appError("busyBlock.toggleFailed");
     }
   }
+}
+
+export async function getCalendarEventsForUserInRange({
+  userId,
+  startAt,
+  endAt,
+}: {
+  userId: string;
+  startAt: string;
+  endAt: string;
+}): Promise<CalendarEvent[]> {
+  const admin = getAdminSupabase();
+  const { data } = await admin
+    .from("calendar_events")
+    .select("id, user_id, title, activity_type, starts_at, ends_at, location, energy_after, dress_code, is_flexible, notes, source, created_at")
+    .eq("user_id", userId)
+    .gte("starts_at", startAt)
+    .lte("starts_at", endAt)
+    .order("starts_at", { ascending: true });
+  return (data ?? []) as CalendarEvent[];
 }
