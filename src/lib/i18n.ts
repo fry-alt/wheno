@@ -28,6 +28,9 @@ export type AppErrorKey =
   | "busyBlock.saveFailed"
   | "busyBlock.toggleFailed"
   | "calendar.loadFailed"
+  | "reminder.saveFailed"
+  | "reminder.loadFailed"
+  | "reminder.markSentFailed"
   | "meeting.groupNotFound"
   | "meeting.ownerOnly"
   | "meeting.titleRequired"
@@ -389,6 +392,9 @@ export function getTranslations(language: Language) {
         "busyBlock.saveFailed": () => "Пока не удалось сохранить этот занятый интервал.",
         "busyBlock.toggleFailed": () => "Не удалось обновить занятость. Попробуйте ещё раз.",
         "calendar.loadFailed": () => "Пока не удалось загрузить события календаря.",
+        "reminder.saveFailed": () => "Не удалось сохранить напоминание.",
+        "reminder.loadFailed": () => "Не удалось загрузить напоминания.",
+        "reminder.markSentFailed": () => "Не удалось обновить напоминание.",
         "meeting.groupNotFound": () => "Не удалось найти эту группу.",
         "meeting.ownerOnly": () =>
           "Только владелец группы может создать запрос на встречу.",
@@ -666,6 +672,9 @@ export function getTranslations(language: Language) {
       "busyBlock.saveFailed": () => "We could not save that busy block yet.",
       "busyBlock.toggleFailed": () => "Could not update availability. Please try again.",
       "calendar.loadFailed": () => "We could not load your calendar events yet.",
+      "reminder.saveFailed": () => "Could not save the reminder.",
+      "reminder.loadFailed": () => "Could not load reminders.",
+      "reminder.markSentFailed": () => "Could not update reminder.",
       "meeting.groupNotFound": () => "We could not find that group.",
       "meeting.ownerOnly": () => "Only the group owner can create a meeting request.",
       "meeting.titleRequired": () => "Please give the meeting request a title.",

@@ -1165,7 +1165,7 @@ export async function createReminder({
     chat_id: chatId,
     remind_at: remindAt.toISOString(),
   });
-  if (error) throw new Error(error.message);
+  if (error) throw appError("reminder.saveFailed");
 }
 
 export async function getPendingReminders(): Promise<
@@ -1178,17 +1178,22 @@ export async function getPendingReminders(): Promise<
     .lte("remind_at", new Date().toISOString())
     .eq("sent", false);
 
-  if (error) throw new Error(error.message);
+  if (error) throw appError("reminder.loadFailed");
 
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-    ...(row as Reminder),
-    event_title: (row.calendar_events as { title: string; starts_at: string }).title,
-    event_starts_at: (row.calendar_events as { title: string; starts_at: string }).starts_at,
-  }));
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+    const evt = unwrapRelation(
+      row.calendar_events as { title: string; starts_at: string } | Array<{ title: string; starts_at: string }> | null
+    );
+    return {
+      ...(row as Reminder),
+      event_title: evt?.title ?? "",
+      event_starts_at: evt?.starts_at ?? "",
+    };
+  });
 }
 
 export async function markReminderSent(id: string): Promise<void> {
   const admin = getAdminSupabase();
   const { error } = await admin.from("reminders").update({ sent: true }).eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw appError("reminder.markSentFailed");
 }
