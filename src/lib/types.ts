@@ -165,3 +165,13 @@ export type CalendarEvent = {
   source: string;
   created_at: string;
 };
+
+export type Reminder = {
+  id: string;
+  user_id: string;
+  event_id: string;
+  chat_id: number;
+  remind_at: string;
+  sent: boolean;
+  created_at: string;
+};

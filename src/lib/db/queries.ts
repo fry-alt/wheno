@@ -20,6 +20,7 @@ import type {
   MeetingOptionDetail,
   MeetingRequestSummary,
   PreferredTime,
+  Reminder,
   SchedulerBusyBlock,
   SchedulerMember,
   TelegramProfile,
@@ -1144,4 +1145,50 @@ export async function getCalendarEventsForUserInRange({
   }
 
   return (data ?? []) as CalendarEvent[];
+}
+
+export async function createReminder({
+  userId,
+  eventId,
+  chatId,
+  remindAt,
+}: {
+  userId: string;
+  eventId: string;
+  chatId: number;
+  remindAt: Date;
+}): Promise<void> {
+  const admin = getAdminSupabase();
+  const { error } = await admin.from("reminders").insert({
+    user_id: userId,
+    event_id: eventId,
+    chat_id: chatId,
+    remind_at: remindAt.toISOString(),
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function getPendingReminders(): Promise<
+  Array<Reminder & { event_title: string; event_starts_at: string }>
+> {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("reminders")
+    .select("*, calendar_events(title, starts_at)")
+    .lte("remind_at", new Date().toISOString())
+    .eq("sent", false);
+
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    ...(row as Reminder),
+    event_title: (row.calendar_events as { title: string; starts_at: string }).title,
+    event_starts_at: (row.calendar_events as { title: string; starts_at: string }).starts_at,
+  }));
+}
+
+export async function markReminderSent(id: string): Promise<void> {
+  const admin = getAdminSupabase();
+  const { error } = await admin.from("reminders").update({ sent: true }).eq("id", id);
+  if (error) throw new Error(error.message);
 }
