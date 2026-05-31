@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { formatInTimeZone } from "date-fns-tz";
 import { getPendingReminders, markReminderSent } from "@/lib/db/queries";
 import { getCronSecret, getTelegramBotToken } from "@/lib/env";
+import { normalizeTimezone } from "@/lib/telegram";
 
 export async function GET(request: Request) {
   const secret = getCronSecret();
@@ -15,10 +16,12 @@ export async function GET(request: Request) {
   const reminders = await getPendingReminders();
   const token = getTelegramBotToken();
 
+  let sentCount = 0;
   for (const reminder of reminders) {
     try {
-      const timeStr = formatInTimeZone(reminder.event_starts_at, "UTC", "HH:mm");
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      const tz = normalizeTimezone(reminder.user_timezone);
+      const timeStr = formatInTimeZone(reminder.event_starts_at, tz, "HH:mm");
+      const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -27,11 +30,13 @@ export async function GET(request: Request) {
           parse_mode: "HTML",
         }),
       });
+      if (!response.ok) throw new Error(`Telegram error: ${response.status}`);
       await markReminderSent(reminder.id);
+      sentCount++;
     } catch (err) {
       console.error(`Failed to send reminder ${reminder.id}:`, err);
     }
   }
 
-  return NextResponse.json({ ok: true, sent: reminders.length });
+  return NextResponse.json({ ok: true, sent: sentCount });
 }

@@ -1169,12 +1169,12 @@ export async function createReminder({
 }
 
 export async function getPendingReminders(): Promise<
-  Array<Reminder & { event_title: string; event_starts_at: string }>
+  Array<Reminder & { event_title: string; event_starts_at: string; user_timezone: string }>
 > {
   const admin = getAdminSupabase();
   const { data, error } = await admin
     .from("reminders")
-    .select("*, calendar_events(title, starts_at)")
+    .select("*, calendar_events(title, starts_at), users(timezone)")
     .lte("remind_at", new Date().toISOString())
     .eq("sent", false);
 
@@ -1184,10 +1184,14 @@ export async function getPendingReminders(): Promise<
     const evt = unwrapRelation(
       row.calendar_events as { title: string; starts_at: string } | Array<{ title: string; starts_at: string }> | null
     );
+    const usr = unwrapRelation(
+      row.users as { timezone: string } | Array<{ timezone: string }> | null
+    );
     return {
       ...(row as Reminder),
       event_title: evt?.title ?? "",
       event_starts_at: evt?.starts_at ?? "",
+      user_timezone: usr?.timezone ?? "Europe/Moscow",
     };
   });
 }
