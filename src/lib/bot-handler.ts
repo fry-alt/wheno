@@ -4,8 +4,9 @@ import type OpenAI from "openai";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { processMessage, type CalendarContext, type ParsedEvent } from "@/lib/openai";
+import { transcribeVoice } from "@/lib/openai";
 import { normalizeTimezone } from "@/lib/telegram";
-import { upsertTelegramUser, createReminder } from "@/lib/db/queries";
+import { upsertTelegramUser, createReminder, savePendingVoice, getPendingVoice, deletePendingVoice } from "@/lib/db/queries";
 import type { TelegramProfile } from "@/lib/types";
 
 // ─── Telegram sender ──────────────────────────────────────────────────────────
@@ -217,14 +218,15 @@ export async function handleBotMessage(update: {
     };
     chat: { id: number };
     text?: string;
+    voice?: { file_id: string; duration: number };
   };
 }) {
   const msg = update.message;
-  if (!msg?.text || !msg.from) return;
+  if ((!msg?.text && !msg?.voice) || !msg.from) return;
 
   const tgUser = msg.from;
   const chatId = msg.chat.id;
-  const text   = msg.text.trim();
+  const text   = msg.text?.trim() ?? "";
   const lang: "ru" | "en" = tgUser.language_code === "ru" ? "ru" : "en";
 
   // 1. Upsert user
@@ -249,6 +251,35 @@ export async function handleBotMessage(update: {
         : "Welcome back! 👋 Just tell me what you want to schedule.";
       await sendMessage(chatId, reply);
     }
+    return;
+  }
+
+  // Handle voice message
+  if (msg.voice) {
+    await sendMessage(chatId, lang === "ru" ? "🎤 Слушаю..." : "🎤 Listening...");
+    let transcription: string;
+    try {
+      transcription = await transcribeVoice(msg.voice.file_id);
+    } catch {
+      await sendMessage(chatId, lang === "ru" ? "Не смог распознать голос, попробуй ещё раз." : "Could not transcribe. Please try again.");
+      return;
+    }
+
+    await savePendingVoice(user.id, transcription);
+
+    const confirmText = lang === "ru"
+      ? `🎤 Расслышал: «${transcription}»\n\nДобавить событие?`
+      : `🎤 I heard: «${transcription}»\n\nAdd this event?`;
+
+    const reply_markup = {
+      inline_keyboard: [[
+        { text: lang === "ru" ? "✅ Добавить" : "✅ Add", callback_data: "voice_confirm" },
+        { text: lang === "ru" ? "✏️ Исправить" : "✏️ Edit", callback_data: "voice_edit" },
+        { text: lang === "ru" ? "❌ Отмена" : "❌ Cancel", callback_data: "voice_cancel" },
+      ]],
+    };
+
+    await sendMessage(chatId, confirmText, reply_markup);
     return;
   }
 
@@ -358,7 +389,7 @@ export async function handleBotMessage(update: {
 
 export async function handleCallbackQuery(callbackQuery: {
   id: string;
-  from: { id: number; language_code?: string };
+  from: { id: number; first_name: string; last_name?: string; username?: string; language_code?: string };
   message?: { chat: { id: number }; message_id: number };
   data?: string;
 }) {
@@ -508,6 +539,57 @@ export async function handleCallbackQuery(callbackQuery: {
     await sendMessage(chatId, lang === "ru"
       ? `Что изменить в ${details}?\nНапиши, например: «переставь на 19:00» или «добавь место — кофейня»`
       : `What should I change in ${details}?\nE.g. "move to 7pm" or "add location — coffee shop"`);
+    return;
+  }
+
+  // voice_confirm — process saved transcription as text
+  if (data === "voice_confirm") {
+    const admin = getAdminSupabase();
+    const { data: userRows } = await admin
+      .from("users")
+      .select("id, timezone")
+      .eq("telegram_id", String(callbackQuery.from.id))
+      .limit(1);
+    const dbUser = userRows?.[0] as { id: string; timezone: string } | undefined;
+    if (!dbUser) return;
+
+    const transcription = await getPendingVoice(dbUser.id);
+    if (!transcription) {
+      await sendMessage(chatId, lang === "ru" ? "Сессия истекла, отправь голосовое снова." : "Session expired, send voice again.");
+      return;
+    }
+    await deletePendingVoice(dbUser.id);
+
+    // Process as a normal text message
+    await handleBotMessage({
+      message: {
+        from: callbackQuery.from,
+        chat: { id: chatId },
+        text: transcription,
+      },
+    });
+    return;
+  }
+
+  // voice_edit — ask for corrected text
+  if (data === "voice_edit") {
+    await sendMessage(chatId, lang === "ru"
+      ? "Напиши исправленный вариант текстом:"
+      : "Type the corrected version:");
+    return;
+  }
+
+  // voice_cancel
+  if (data === "voice_cancel") {
+    const admin = getAdminSupabase();
+    const { data: userRows } = await admin
+      .from("users")
+      .select("id")
+      .eq("telegram_id", String(callbackQuery.from.id))
+      .limit(1);
+    const userId = (userRows?.[0] as { id: string } | undefined)?.id;
+    if (userId) await deletePendingVoice(userId);
+    await sendMessage(chatId, lang === "ru" ? "Окей, отменено." : "Cancelled.");
     return;
   }
 
