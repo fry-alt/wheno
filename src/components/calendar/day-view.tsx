@@ -62,6 +62,7 @@ export function DayView({
     try {
       await addDayNoteAction(noteDraft, selectedDate);
       setNoteDraft("");
+      router.refresh();
     } finally {
       setSavingNote(false);
     }

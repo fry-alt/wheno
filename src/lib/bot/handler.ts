@@ -2,11 +2,10 @@ import { formatInTimeZone } from "date-fns-tz";
 
 import { transcribeVoice } from "@/lib/openai";
 import { parseEvent } from "@/lib/events/parse";
-import { deleteEventById } from "@/lib/events/queries";
+import { deleteEventById, insertEvent } from "@/lib/events/queries";
 import { categoryEmoji } from "@/lib/events/categories";
-import { upsertTelegramUser } from "@/lib/users";
+import { getUserByTelegramId, upsertTelegramUser } from "@/lib/users";
 import { normalizeTimezone } from "@/lib/telegram";
-import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { ParsedEvent } from "@/lib/events/types";
 import type { AppUser } from "@/lib/types";
 
@@ -42,7 +41,12 @@ async function answerCallback(id: string): Promise<void> {
   });
 }
 
+// Resolve the app user for a Telegram sender without clobbering data the Mini App
+// owns (timezone, photo). For an existing user we return their stored row as-is;
+// only on first contact do we create one with a default timezone.
 async function resolveUser(from: NonNullable<TgMessage["from"]>): Promise<AppUser> {
+  const existing = await getUserByTelegramId(String(from.id));
+  if (existing) return existing;
   return upsertTelegramUser({
     telegramId: String(from.id),
     firstName: from.first_name ?? "User",
@@ -90,10 +94,9 @@ export async function handleBotMessage(message: TgMessage): Promise<void> {
     return;
   }
 
-  const admin = getAdminSupabase();
-  const { data, error } = await admin
-    .from("events")
-    .insert({
+  let eventId: string;
+  try {
+    eventId = await insertEvent({
       user_id: user.id,
       title: parsed.title,
       category: parsed.category,
@@ -102,16 +105,13 @@ export async function handleBotMessage(message: TgMessage): Promise<void> {
       is_fixed: parsed.is_fixed,
       notes: parsed.notes,
       location: null,
-    })
-    .select("id")
-    .single();
-
-  if (error || !data) {
+    });
+  } catch {
     await sendMessage(message.chat.id, "Не удалось сохранить. Попробуй ещё раз.");
     return;
   }
 
-  const built = card((data as { id: string }).id, parsed, user.timezone);
+  const built = card(eventId, parsed, user.timezone);
   await sendMessage(message.chat.id, built.text, built.reply_markup);
 }
 
@@ -122,19 +122,14 @@ export async function handleCallbackQuery(cb: TgCallback): Promise<void> {
   }
   const [action, eventId] = cb.data.split(":");
   if (action === "del" && eventId) {
-    const user = await upsertTelegramUser({
-      telegramId: String(cb.from.id),
-      firstName: "User",
-      lastName: null,
-      username: null,
-      photoUrl: null,
-      timezone: normalizeTimezone(undefined),
-    });
-    try {
-      await deleteEventById(user.id, eventId);
-      await sendMessage(cb.message.chat.id, "🗑 Удалено.");
-    } catch {
-      await sendMessage(cb.message.chat.id, "Не удалось удалить.");
+    const user = await getUserByTelegramId(String(cb.from.id));
+    if (user) {
+      try {
+        await deleteEventById(user.id, eventId);
+        await sendMessage(cb.message.chat.id, "🗑 Удалено.");
+      } catch {
+        await sendMessage(cb.message.chat.id, "Не удалось удалить.");
+      }
     }
   }
   await answerCallback(cb.id);

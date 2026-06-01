@@ -32,10 +32,15 @@ export interface NewEvent {
   location: string | null;
 }
 
-export async function insertEvent(event: NewEvent): Promise<void> {
+export async function insertEvent(event: NewEvent): Promise<string> {
   const admin = getAdminSupabase();
-  const { error } = await admin.from("events").insert(event as unknown as Record<string, unknown>);
-  if (error) throw new Error(error.message);
+  const { data, error } = await admin
+    .from("events")
+    .insert(event as unknown as Record<string, unknown>)
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Failed to insert event");
+  return (data as { id: string }).id;
 }
 
 export async function updateEventById(

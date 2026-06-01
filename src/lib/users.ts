@@ -9,6 +9,17 @@ export async function getUserById(userId: string): Promise<AppUser | null> {
   return (data as AppUser | null) ?? null;
 }
 
+export async function getUserByTelegramId(telegramId: string): Promise<AppUser | null> {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("users")
+    .select("*")
+    .eq("telegram_id", telegramId)
+    .maybeSingle();
+  if (error) throw appError("user.loadProfileFailed");
+  return (data as AppUser | null) ?? null;
+}
+
 export async function upsertTelegramUser(profile: TelegramProfile): Promise<AppUser> {
   const admin = getAdminSupabase();
   const now = new Date().toISOString();

@@ -1,4 +1,11 @@
 -- wheno schema (Layer 1)
+--
+-- Access model: the app talks to Postgres ONLY via the Supabase service-role key
+-- (see src/lib/supabase/admin.ts), which bypasses RLS. We still ENABLE RLS with no
+-- policies on every table so that the anon/authenticated roles (e.g. a leaked anon
+-- key hitting the REST API) are denied all direct access. Owner-scoping is enforced
+-- in application queries via `.eq("user_id", ...)`. If a client-role path is ever
+-- added, owner policies must be created here first.
 create extension if not exists "pgcrypto";
 
 create or replace function public.set_updated_at()

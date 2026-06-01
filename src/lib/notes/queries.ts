@@ -28,20 +28,6 @@ export async function getDayNotes(userId: string): Promise<Note[]> {
   return (data ?? []) as Note[];
 }
 
-export async function getNoteForDate(userId: string, date: string): Promise<Note | null> {
-  const admin = getAdminSupabase();
-  const { data, error } = await admin
-    .from("notes")
-    .select(COLUMNS)
-    .eq("user_id", userId)
-    .eq("date", date)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data as Note | null) ?? null;
-}
-
 export async function insertNote(note: {
   user_id: string;
   content: string;
