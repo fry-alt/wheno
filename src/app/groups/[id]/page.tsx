@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addDays, format, parseISO } from "date-fns";
 
-import { AppShell } from "@/components/app-shell";
+import { DarkShell } from "@/components/dark-shell";
 import { CopyInviteButton } from "@/components/copy-invite-button";
 import { EmptyState } from "@/components/empty-state";
 import { GroupAvailabilityCalendar } from "@/components/group-availability-calendar";
@@ -34,19 +34,14 @@ export default async function GroupDetailPage({
   const [{ id }, rawSearchParams] = await Promise.all([params, searchParams]);
   const error = decodeSearchMessage(readSearchParam(rawSearchParams.error));
   const user = await getCurrentUser();
-  const { language, theme } = await getUiPreferences();
+  const { language } = await getUiPreferences();
   const copy = getTranslations(language);
 
   if (!user) {
     return (
-      <AppShell
-        description={copy.group.splashDescription}
-        language={language}
-        theme={theme}
-        title={copy.group.loadingTitle}
-      >
+      <DarkShell title={copy.group.loadingTitle} backHref="/groups">
         <SessionBootstrap language={language} />
-      </AppShell>
+      </DarkShell>
     );
   }
 
@@ -72,13 +67,7 @@ export default async function GroupDetailPage({
   ]);
 
   return (
-    <AppShell
-      description={copy.group.description}
-      language={language}
-      theme={theme}
-      title={group.name}
-      user={user}
-    >
+    <DarkShell title={group.name} backHref="/groups">
       {error ? (
         <Card className="border-danger/40 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
@@ -199,6 +188,6 @@ export default async function GroupDetailPage({
       <Link className={buttonStyles({ fullWidth: true, variant: "secondary" })} href="/">
         {copy.common.backHome}
       </Link>
-    </AppShell>
+    </DarkShell>
   );
 }

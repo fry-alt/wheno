@@ -1,9 +1,9 @@
+// src/app/groups/new/page.tsx
 import Link from "next/link";
 
-import { AppShell } from "@/components/app-shell";
+import { DarkShell } from "@/components/dark-shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { SessionBootstrap } from "@/components/session-bootstrap";
-import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getCurrentUser } from "@/lib/auth";
@@ -22,34 +22,22 @@ export default async function CreateGroupPage({
   const params = await searchParams;
   const error = decodeSearchMessage(readSearchParam(params.error));
   const user = await getCurrentUser();
-  const { language, theme } = await getUiPreferences();
+  const { language } = await getUiPreferences();
   const copy = getTranslations(language);
 
   if (!user) {
     return (
-      <AppShell
-        description={copy.createGroup.splashDescription}
-        language={language}
-        theme={theme}
-        title={copy.createGroup.title}
-      >
+      <DarkShell title={copy.createGroup.title} backHref="/groups">
         <SessionBootstrap language={language} />
-      </AppShell>
+      </DarkShell>
     );
   }
 
   return (
-    <AppShell
-      description={copy.createGroup.description}
-      language={language}
-      theme={theme}
-      title={copy.createGroup.title}
-      user={user}
-    >
+    <DarkShell title={copy.createGroup.title} backHref="/groups">
       {error ? (
         <Card className="border-danger/35 bg-danger-soft text-sm text-danger">{error}</Card>
       ) : null}
-
       <Card>
         <form action={createGroupAction} className="space-y-4">
           <Input
@@ -66,10 +54,6 @@ export default async function CreateGroupPage({
           />
         </form>
       </Card>
-
-      <Link className={buttonStyles({ fullWidth: true, variant: "secondary" })} href="/">
-        {copy.common.backHome}
-      </Link>
-    </AppShell>
+    </DarkShell>
   );
 }
