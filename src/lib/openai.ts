@@ -15,10 +15,15 @@ export async function transcribeVoice(fileId: string): Promise<string> {
   const token = getTelegramBotToken();
 
   const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
-  const fileJson = (await fileRes.json()) as { result: { file_path: string } };
+  if (!fileRes.ok) throw new Error(`Telegram getFile failed: ${fileRes.status}`);
+  const fileJson = (await fileRes.json()) as { ok: boolean; result?: { file_path: string } };
+  if (!fileJson.ok || !fileJson.result?.file_path) {
+    throw new Error("Telegram getFile returned no file_path");
+  }
   const filePath = fileJson.result.file_path;
 
   const audioRes = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`);
+  if (!audioRes.ok) throw new Error(`Telegram file download failed: ${audioRes.status}`);
   const audioBuffer = await audioRes.arrayBuffer();
 
   const openai = getOpenAI();
