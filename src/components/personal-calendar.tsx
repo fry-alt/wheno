@@ -1,4 +1,3 @@
-// src/components/personal-calendar.tsx
 "use client";
 
 import { useMemo, useState } from "react";

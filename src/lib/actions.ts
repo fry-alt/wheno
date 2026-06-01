@@ -61,7 +61,7 @@ export async function joinGroupAction(formData: FormData) {
 
   try {
     const groupId = await joinGroupByInviteCode(user.id, inviteCode);
-    revalidatePath("/");
+    revalidatePath("/groups");
     redirect(`/groups/${groupId}`);
   } catch (error) {
     const message = getLocalizedErrorMessage(error, language, "group.joinFailed");

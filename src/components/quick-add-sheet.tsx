@@ -1,4 +1,3 @@
-// src/components/quick-add-sheet.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -37,6 +36,7 @@ function DrumPicker({
     if (ref.current) {
       ref.current.scrollTop = defaultIndex * 40;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cleanup debounce timer on unmount

@@ -1,4 +1,3 @@
-// src/app/groups/new/page.tsx
 import { DarkShell } from "@/components/dark-shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { SessionBootstrap } from "@/components/session-bootstrap";
