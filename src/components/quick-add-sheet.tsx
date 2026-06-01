@@ -2,7 +2,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { ru } from "date-fns/locale";
 
 import { createCalendarEventAction } from "@/lib/actions";
@@ -38,15 +39,37 @@ function DrumPicker({
     }
   }, []);
 
-  function handleScroll() {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      if (!ref.current) return;
-      const idx = Math.round(ref.current.scrollTop / 40);
-      const clamped = Math.max(0, Math.min(idx, values.length - 1));
-      onChange(values[clamped]);
-    }, 80);
-  }
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    function commit() {
+      if (!el) return;
+      const idx = Math.round(el.scrollTop / 40);
+      onChange(values[Math.max(0, Math.min(idx, values.length - 1))]);
+    }
+
+    // Use scrollend when available (modern browsers / iOS 17+)
+    if ("onscrollend" in (el as EventTarget)) {
+      el.addEventListener("scrollend", commit);
+      return () => el.removeEventListener("scrollend", commit);
+    }
+
+    // Fallback: 300ms debounce on scroll (safer than 80ms for iOS momentum)
+    function handleScrollFallback() {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(commit, 300);
+    }
+    el.addEventListener("scroll", handleScrollFallback);
+    return () => el.removeEventListener("scroll", handleScrollFallback);
+  }, [onChange, values]);
 
   return (
     <div className="relative w-14">
@@ -78,7 +101,6 @@ function DrumPicker({
       {/* Scrollable column */}
       <div
         ref={ref}
-        onScroll={handleScroll}
         className="scrollbar-hide"
         style={{
           height: 120,
@@ -127,8 +149,8 @@ export function QuickAddSheet({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const displayDate = format(parseISO(date), "d MMMM, EEE", { locale: ru });
-  const buttonLabel = `Добавить  ${startH}:${startM} – ${endH}:${endM}`;
+  const displayDate = formatInTimeZone(parseISO(date), timezone, "d MMMM, EEE", { locale: ru });
+  const buttonLabel = `Добавить ${startH}:${startM} – ${endH}:${endM}`;
 
   async function handleSubmit() {
     setError(null);
