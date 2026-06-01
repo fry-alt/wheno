@@ -5,6 +5,7 @@ import { CalendarScreen } from "@/components/calendar/calendar-screen";
 import { SessionBootstrap } from "@/components/session-bootstrap";
 import { getCurrentUser } from "@/lib/auth";
 import { getEventsInRange } from "@/lib/events/queries";
+import { getDayNotes } from "@/lib/notes/queries";
 import { getDateRangeUtc } from "@/lib/datetime";
 import { getUiPreferences } from "@/lib/preferences";
 import { readSearchParam } from "@/lib/utils";
@@ -40,7 +41,10 @@ export default async function CalendarPage({
     format(endOfMonth(monthDate), "yyyy-MM-dd"),
     user.timezone,
   );
-  const events = await getEventsInRange(user.id, start, end);
+  const [events, dayNotes] = await Promise.all([
+    getEventsInRange(user.id, start, end),
+    getDayNotes(user.id),
+  ]);
 
-  return <CalendarScreen events={events} monthStr={monthStr} timezone={user.timezone} />;
+  return <CalendarScreen events={events} dayNotes={dayNotes} monthStr={monthStr} timezone={user.timezone} />;
 }

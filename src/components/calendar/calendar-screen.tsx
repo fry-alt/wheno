@@ -6,13 +6,16 @@ import { formatInTimeZone } from "date-fns-tz";
 import { DayView } from "./day-view";
 import { CaptureSheet } from "@/components/capture/capture-sheet";
 import type { CalendarEvent } from "@/lib/events/types";
+import type { Note } from "@/lib/notes/types";
 
 export function CalendarScreen({
   events,
+  dayNotes,
   monthStr,
   timezone,
 }: {
   events: CalendarEvent[];
+  dayNotes: Note[];
   monthStr: string;
   timezone: string;
 }) {
@@ -24,6 +27,7 @@ export function CalendarScreen({
     <>
       <DayView
         events={events}
+        dayNotes={dayNotes}
         monthStr={monthStr}
         timezone={timezone}
         onEventClick={(e) => { setEditing(e); setSheetOpen(true); }}
