@@ -5,30 +5,33 @@ import { formatInTimeZone } from "date-fns-tz";
 
 import { createEventAction, updateEventAction, deleteEventAction, type EventFormInput } from "@/lib/events/actions";
 import { CATEGORIES, CATEGORY_DEFAULT_FIXED, CATEGORY_EMOJI, CATEGORY_LABEL_RU } from "@/lib/events/categories";
-import type { CalendarEvent, Category } from "@/lib/events/types";
+import type { CalendarEvent, Category, ParsedEvent } from "@/lib/events/types";
 
 export function EventForm({
   timezone,
   initialDate,
   editing,
+  prefill,
   onDone,
 }: {
   timezone: string;
   initialDate: string;
   editing?: CalendarEvent | null;
+  prefill?: ParsedEvent | null;
   onDone: () => void;
 }) {
-  const editStart = editing ? formatInTimeZone(editing.starts_at, timezone, "HH:mm") : "09:00";
-  const editEnd = editing ? formatInTimeZone(editing.ends_at, timezone, "HH:mm") : "10:00";
-  const editDate = editing ? formatInTimeZone(editing.starts_at, timezone, "yyyy-MM-dd") : initialDate;
+  const source = editing ?? prefill ?? null; // editing wins, then NL prefill
+  const srcStart = source ? formatInTimeZone(source.starts_at, timezone, "HH:mm") : "09:00";
+  const srcEnd = source ? formatInTimeZone(source.ends_at, timezone, "HH:mm") : "10:00";
+  const srcDate = source ? formatInTimeZone(source.starts_at, timezone, "yyyy-MM-dd") : initialDate;
 
-  const [title, setTitle] = useState(editing?.title ?? "");
-  const [category, setCategory] = useState<Category>((editing?.category as Category) ?? "gym");
-  const [date, setDate] = useState(editDate);
-  const [startTime, setStartTime] = useState(editStart);
-  const [endTime, setEndTime] = useState(editEnd);
-  const [isFixed, setIsFixed] = useState(editing?.is_fixed ?? CATEGORY_DEFAULT_FIXED.gym);
-  const [notes, setNotes] = useState(editing?.notes ?? "");
+  const [title, setTitle] = useState(source?.title ?? "");
+  const [category, setCategory] = useState<Category>((source?.category as Category) ?? "gym");
+  const [date, setDate] = useState(srcDate);
+  const [startTime, setStartTime] = useState(srcStart);
+  const [endTime, setEndTime] = useState(srcEnd);
+  const [isFixed, setIsFixed] = useState(source?.is_fixed ?? CATEGORY_DEFAULT_FIXED.gym);
+  const [notes, setNotes] = useState(source?.notes ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

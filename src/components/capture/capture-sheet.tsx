@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ConfirmCard } from "./confirm-card";
 import { EventForm } from "./event-form";
@@ -26,6 +26,14 @@ export function CaptureSheet({
   const [parsed, setParsed] = useState<ParsedEvent | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const [recording, setRecording] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        recorderRef.current.stop(); // triggers onstop → stops mic tracks
+      }
+    };
+  }, []);
 
   async function runParse(input: string) {
     setError(null);
@@ -110,7 +118,7 @@ export function CaptureSheet({
         )}
 
         {mode === "manual" && (
-          <EventForm timezone={timezone} initialDate={defaultDate} editing={editing} onDone={onClose} />
+          <EventForm timezone={timezone} initialDate={defaultDate} editing={editing} prefill={editing ? null : parsed} onDone={onClose} />
         )}
 
         {mode === "confirm" && parsed && (
