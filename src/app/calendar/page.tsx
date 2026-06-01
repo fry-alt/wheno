@@ -1,37 +1,46 @@
-import { addDays, format, parseISO } from "date-fns";
+import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
-import { AppShell } from "@/components/app-shell";
 import { PersonalCalendar } from "@/components/personal-calendar";
 import { SessionBootstrap } from "@/components/session-bootstrap";
 import { getCurrentUser } from "@/lib/auth";
 import { getCalendarEventsForUserInRange } from "@/lib/db/queries";
-import { getDateRangeUtc, getLocalDateValue } from "@/lib/datetime";
-import { getTranslations } from "@/lib/i18n";
+import { getDateRangeUtc } from "@/lib/datetime";
 import { getUiPreferences } from "@/lib/preferences";
+import { readSearchParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function CalendarPage() {
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   const user = await getCurrentUser();
-  const { language, theme } = await getUiPreferences();
-  const copy = getTranslations(language);
+  const { language } = await getUiPreferences();
 
   if (!user) {
     return (
-      <AppShell
-        description={copy.calendar.splashDescription}
-        language={language}
-        theme={theme}
-        title={copy.calendar.title}
-      >
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#0f0f0f] p-8">
+        <span className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#2481cc] text-xl font-bold text-white">
+          w
+        </span>
         <SessionBootstrap language={language} />
-      </AppShell>
+      </div>
     );
   }
 
-  const weekStart = getLocalDateValue(user.timezone);
-  const weekEnd = format(addDays(parseISO(weekStart), 6), "yyyy-MM-dd");
-  const { start, end } = getDateRangeUtc(weekStart, weekEnd, user.timezone);
+  const monthParam = readSearchParam(params?.month);
+  const monthStr =
+    monthParam && /^\d{4}-\d{2}$/.test(monthParam)
+      ? monthParam
+      : formatInTimeZone(new Date(), user.timezone, "yyyy-MM");
+
+  const monthDate = parseISO(`${monthStr}-01`);
+  const monthStart = format(startOfMonth(monthDate), "yyyy-MM-dd");
+  const monthEnd = format(endOfMonth(monthDate), "yyyy-MM-dd");
+  const { start, end } = getDateRangeUtc(monthStart, monthEnd, user.timezone);
 
   const events = await getCalendarEventsForUserInRange({
     userId: user.id,
@@ -40,14 +49,6 @@ export default async function CalendarPage() {
   });
 
   return (
-    <AppShell
-      description={copy.calendar.description}
-      language={language}
-      theme={theme}
-      title={copy.calendar.title}
-      user={user}
-    >
-      <PersonalCalendar events={events} timezone={user.timezone} weekStart={weekStart} />
-    </AppShell>
+    <PersonalCalendar events={events} monthStr={monthStr} timezone={user.timezone} />
   );
 }

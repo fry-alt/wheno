@@ -15,7 +15,7 @@ const ACTIVITY_TYPES = [
   { value: "other", label: "📌 Другое" },
 ];
 
-export function QuickAddSheet({ onClose, timezone }: { onClose: () => void; timezone: string }) {
+export function QuickAddSheet({ onClose, timezone }: { onClose: () => void; timezone: string; date?: string }) {
   const today = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
