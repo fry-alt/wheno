@@ -14,7 +14,7 @@ export function BottomNav() {
         <span className="text-lg">📅</span>
         Календарь
       </Link>
-      <button className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-2xl font-bold text-black" aria-label="Добавить">+</button>
+      <Link href="/calendar" className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-2xl font-bold text-black" aria-label="Добавить">+</Link>
       <Link href="/notes" className="flex flex-col items-center gap-0.5 text-[10px]" style={{ color: isNotes ? "#fff" : "#555" }}>
         <span className="text-lg">📝</span>
         Заметки
