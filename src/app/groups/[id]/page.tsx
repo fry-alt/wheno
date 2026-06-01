@@ -184,10 +184,6 @@ export default async function GroupDetailPage({
           title={copy.group.noMeetingsTitle}
         />
       )}
-
-      <Link className={buttonStyles({ fullWidth: true, variant: "secondary" })} href="/">
-        {copy.common.backHome}
-      </Link>
     </DarkShell>
   );
 }
