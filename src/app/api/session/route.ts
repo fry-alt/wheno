@@ -8,7 +8,7 @@ import {
   getSessionCookieConfig,
 } from "@/lib/session";
 import { resolveTelegramProfile } from "@/lib/telegram";
-import { upsertTelegramUser } from "@/lib/db/queries";
+import { upsertTelegramUser } from "@/lib/users";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {

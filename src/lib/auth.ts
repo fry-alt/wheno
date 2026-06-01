@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getUserById } from "@/lib/db/queries";
+import { getUserById } from "@/lib/users";
 import { getTranslations } from "@/lib/i18n";
 import { getUiPreferences } from "@/lib/preferences";
 import { SESSION_COOKIE_NAME, parseSessionCookie } from "@/lib/session";

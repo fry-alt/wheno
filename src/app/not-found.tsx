@@ -1,25 +1,12 @@
-import { AppShell } from "@/components/app-shell";
-import { EmptyState } from "@/components/empty-state";
-import { getTranslations } from "@/lib/i18n";
-import { getUiPreferences } from "@/lib/preferences";
+import Link from "next/link";
 
-export default async function NotFound() {
-  const { language, theme } = await getUiPreferences();
-  const copy = getTranslations(language);
-
+export default function NotFound() {
   return (
-    <AppShell
-      description={copy.notFound.description}
-      language={language}
-      theme={theme}
-      title={copy.notFound.title}
-    >
-      <EmptyState
-        actionHref="/"
-        actionLabel={copy.common.backHome}
-        description={copy.notFound.emptyDescription}
-        title={copy.notFound.emptyTitle}
-      />
-    </AppShell>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#0f0f0f] p-8 text-center text-white">
+      <p className="text-sm text-[#999]">Страница не найдена.</p>
+      <Link href="/calendar" className="rounded-xl bg-white px-5 py-2 text-sm font-semibold text-black">
+        На календарь
+      </Link>
+    </div>
   );
 }
