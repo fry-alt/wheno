@@ -45,7 +45,7 @@ export async function createGroupAction(formData: FormData) {
 
   try {
     const groupId = await createGroupForUser(user.id, name);
-    revalidatePath("/");
+    revalidatePath("/groups");
     redirect(`/groups/${groupId}`);
   } catch (error) {
     const message = getLocalizedErrorMessage(error, language, "group.createFailed");
