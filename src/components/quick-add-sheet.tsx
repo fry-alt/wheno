@@ -1,13 +1,18 @@
+// src/components/quick-add-sheet.tsx
 "use client";
 
-import { useState } from "react";
-import { format } from "date-fns";
-import { formatInTimeZone } from "date-fns-tz";
+import { useEffect, useRef, useState } from "react";
+import { format, parseISO } from "date-fns";
+import { ru } from "date-fns/locale";
+
 import { createCalendarEventAction } from "@/lib/actions";
 
-const ACTIVITY_TYPES = [
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTES = ["00", "15", "30", "45"];
+
+const ACTIVITY_CHIPS = [
   { value: "gym", label: "🏋️ Зал" },
-  { value: "run", label: "🏃 Пробежка" },
+  { value: "run", label: "🏃 Бег" },
   { value: "dinner", label: "🍽️ Ужин" },
   { value: "coffee", label: "☕ Кофе" },
   { value: "meeting", label: "💼 Встреча" },
@@ -15,30 +20,136 @@ const ACTIVITY_TYPES = [
   { value: "other", label: "📌 Другое" },
 ];
 
-export function QuickAddSheet({ onClose, timezone }: { onClose: () => void; timezone: string; date?: string }) {
-  const today = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
+function DrumPicker({
+  values,
+  defaultIndex,
+  onChange,
+}: {
+  values: string[];
+  defaultIndex: number;
+  onChange: (value: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.scrollTop = defaultIndex * 40;
+    }
+  }, []);
+
+  function handleScroll() {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (!ref.current) return;
+      const idx = Math.round(ref.current.scrollTop / 40);
+      const clamped = Math.max(0, Math.min(idx, values.length - 1));
+      onChange(values[clamped]);
+    }, 80);
+  }
+
+  return (
+    <div className="relative w-14">
+      {/* Center highlight ring */}
+      <div
+        className="pointer-events-none absolute left-0 right-0 rounded-lg border border-[#3a3a3a]"
+        style={{ top: 40, height: 40, zIndex: 2 }}
+      />
+      {/* Top fade */}
+      <div
+        className="pointer-events-none absolute left-0 right-0"
+        style={{
+          top: 0,
+          height: 44,
+          background: "linear-gradient(to bottom, #111 40%, transparent)",
+          zIndex: 2,
+        }}
+      />
+      {/* Bottom fade */}
+      <div
+        className="pointer-events-none absolute left-0 right-0"
+        style={{
+          bottom: 0,
+          height: 44,
+          background: "linear-gradient(to top, #111 40%, transparent)",
+          zIndex: 2,
+        }}
+      />
+      {/* Scrollable column */}
+      <div
+        ref={ref}
+        onScroll={handleScroll}
+        className="scrollbar-hide"
+        style={{
+          height: 120,
+          overflowY: "scroll",
+          scrollSnapType: "y mandatory",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <div style={{ height: 40 }} />
+        {values.map((v) => (
+          <div
+            key={v}
+            style={{
+              height: 40,
+              scrollSnapAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span className="text-xl font-bold text-white">{v}</span>
+          </div>
+        ))}
+        <div style={{ height: 40 }} />
+      </div>
+    </div>
+  );
+}
+
+export function QuickAddSheet({
+  date,
+  onClose,
+  timezone,
+}: {
+  date: string;
+  onClose: () => void;
+  timezone: string;
+}) {
+  const [activeChip, setActiveChip] = useState("gym");
+  const [title, setTitle] = useState("");
+  const [startH, setStartH] = useState("07");
+  const [startM, setStartM] = useState("00");
+  const [endH, setEndH] = useState("08");
+  const [endM, setEndM] = useState("00");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const displayDate = format(parseISO(date), "d MMMM, EEE", { locale: ru });
+  const buttonLabel = `Добавить  ${startH}:${startM} – ${endH}:${endM}`;
+
+  async function handleSubmit() {
     setError(null);
+    if (!title.trim()) {
+      setError("Введи название");
+      return;
+    }
+    const startVal = parseInt(startH) * 60 + parseInt(startM);
+    const endVal = parseInt(endH) * 60 + parseInt(endM);
+    if (endVal <= startVal) {
+      setError("Конец должен быть позже начала");
+      return;
+    }
     setPending(true);
     try {
-      const form = e.currentTarget;
-      const fd = new FormData(form);
-      const start = fd.get("start_time") as string;
-      const end = fd.get("end_time") as string;
-      if (end <= start) {
-        setError("Время окончания должно быть позже начала");
-        return;
-      }
       await createCalendarEventAction({
-        title: fd.get("title") as string,
-        activity_type: fd.get("activity_type") as string,
-        date: fd.get("date") as string,
-        start_time: start,
-        end_time: end,
+        title: title.trim(),
+        activity_type: activeChip,
+        date,
+        start_time: `${startH}:${startM}`,
+        end_time: `${endH}:${endM}`,
       });
       onClose();
     } catch {
@@ -51,60 +162,101 @@ export function QuickAddSheet({ onClose, timezone }: { onClose: () => void; time
   return (
     <div className="fixed inset-0 z-50 bg-black/60" onClick={onClose}>
       <div
-        className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-[#1a1a1a] p-6 pb-10"
+        className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-[#111] p-5 pb-10"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-5 text-base font-semibold text-white">Добавить событие</h3>
-        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
-          <input
-            required
-            name="title"
-            placeholder="Название"
-            className="w-full rounded-xl bg-[#111] px-4 py-3 text-sm text-white placeholder-[#555] outline-none"
-          />
-          <select
-            name="activity_type"
-            defaultValue="other"
-            className="w-full rounded-xl bg-[#111] px-4 py-3 text-sm text-white outline-none"
-          >
-            {ACTIVITY_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-          <input
-            required
-            name="date"
-            type="date"
-            defaultValue={today}
-            className="w-full rounded-xl bg-[#111] px-4 py-3 text-sm text-white outline-none"
-          />
-          <div className="flex gap-3">
-            <input
-              required
-              name="start_time"
-              type="time"
-              defaultValue="09:00"
-              className="flex-1 rounded-xl bg-[#111] px-4 py-3 text-sm text-white outline-none"
-            />
-            <input
-              required
-              name="end_time"
-              type="time"
-              defaultValue="10:00"
-              className="flex-1 rounded-xl bg-[#111] px-4 py-3 text-sm text-white outline-none"
-            />
-          </div>
-          {error && (
-            <p className="text-xs text-red-400">{error}</p>
-          )}
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-sm font-semibold text-[#999]">{displayDate}</span>
           <button
-            type="submit"
-            disabled={pending}
-            className="mt-2 w-full rounded-xl bg-white py-3 text-sm font-semibold text-black disabled:opacity-50"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2a2a2a] text-xs text-[#999]"
           >
-            {pending ? "Добавляю..." : "Добавить"}
+            ✕
           </button>
-        </form>
+        </div>
+
+        {/* Activity chips */}
+        <div className="mb-4 flex gap-2 overflow-x-auto scrollbar-hide">
+          {ACTIVITY_CHIPS.map((chip) => (
+            <button
+              key={chip.value}
+              onClick={() => setActiveChip(chip.value)}
+              className="flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold"
+              style={{
+                background: activeChip === chip.value ? "#fff" : "#1a1a1a",
+                color: activeChip === chip.value ? "#000" : "#888",
+              }}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Title input */}
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Название"
+          className="mb-5 w-full rounded-xl bg-[#1a1a1a] px-4 py-3 text-sm text-white placeholder-[#555] outline-none"
+        />
+
+        {/* Time pickers */}
+        <div className="mb-2 flex items-start gap-4">
+          {/* Start */}
+          <div className="flex-1">
+            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-[#555]">
+              Начало
+            </p>
+            <div className="flex items-center justify-center gap-1">
+              <DrumPicker
+                values={HOURS}
+                defaultIndex={7}
+                onChange={setStartH}
+              />
+              <span className="mb-1 text-xl font-bold text-[#555]">:</span>
+              <DrumPicker
+                values={MINUTES}
+                defaultIndex={0}
+                onChange={setStartM}
+              />
+            </div>
+          </div>
+
+          {/* Separator */}
+          <div className="mt-10 text-lg font-light text-[#333]">—</div>
+
+          {/* End */}
+          <div className="flex-1">
+            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-[#555]">
+              Конец
+            </p>
+            <div className="flex items-center justify-center gap-1">
+              <DrumPicker
+                values={HOURS}
+                defaultIndex={8}
+                onChange={setEndH}
+              />
+              <span className="mb-1 text-xl font-bold text-[#555]">:</span>
+              <DrumPicker
+                values={MINUTES}
+                defaultIndex={0}
+                onChange={setEndM}
+              />
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="mb-2 text-center text-xs text-red-400">{error}</p>}
+
+        {/* Submit */}
+        <button
+          onClick={handleSubmit}
+          disabled={pending}
+          className="mt-3 w-full rounded-xl bg-white py-3 text-sm font-semibold text-black disabled:opacity-50"
+        >
+          {pending ? "Добавляю..." : buttonLabel}
+        </button>
       </div>
     </div>
   );
