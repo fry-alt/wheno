@@ -105,6 +105,7 @@ With inline keyboard:
    [15 мин]  [30 мин]  [1 час]  [2 часа]  [Утром]  [Своё ✏️]
    ```
 3. User taps a preset → bot confirms: `🔔 Напомню за 30 мин (17:30)`
+   - `Утром` = 09:00 of the event day (if event is today and current time > 09:00, use 1 hour before instead)
 4. User taps `Своё ✏️` → bot asks: `Напиши за сколько напомнить (например: "45 мин" или "3 часа")`
 5. At `remind_at` time → bot sends: `⏰ Через 30 минут — {title} в {start_time}`
 
@@ -133,7 +134,7 @@ create index on public.reminders(remind_at) where sent = false;
 - Queries `reminders` where `remind_at <= now() AND sent = false`
 - Sends Telegram message for each, marks `sent = true`
 - Configured in `vercel.json`: `{ "crons": [{ "path": "/api/cron/reminders", "schedule": "* * * * *" }] }`
-- Protected by `CRON_SECRET` env var checked against `Authorization` header
+- Protected by `CRON_SECRET` env var: checks `Authorization: Bearer {CRON_SECRET}` header (Vercel injects this automatically for cron routes)
 
 ### Files Changed
 
