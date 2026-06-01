@@ -91,7 +91,7 @@ export function PersonalCalendar({
   const [filter, setFilter] = useState<FilterTab>("all");
   const [showAdd, setShowAdd] = useState(false);
 
-  const gridDays = useMemo(() => buildMonthGrid(monthDate), [monthStr]);
+  const gridDays = useMemo(() => buildMonthGrid(monthDate), [monthDate]);
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, Set<string>> = {};
@@ -105,16 +105,16 @@ export function PersonalCalendar({
   }, [events, timezone]);
 
   const weekEvents = useMemo(() => {
-    const d = parseISO(selectedDate);
-    const wStart = startOfWeek(d, { weekStartsOn: 1 });
-    const wEnd = endOfWeek(d, { weekStartsOn: 1 });
+    const dayDate = parseISO(selectedDate);
+    const wStartStr = format(startOfWeek(dayDate, { weekStartsOn: 1 }), "yyyy-MM-dd");
+    const wEndStr = format(endOfWeek(dayDate, { weekStartsOn: 1 }), "yyyy-MM-dd");
     return events.filter((e) => {
-      const t = new Date(e.starts_at);
-      return t >= wStart && t <= wEnd;
+      const dStr = formatInTimeZone(e.starts_at, timezone, "yyyy-MM-dd");
+      return dStr >= wStartStr && dStr <= wEndStr;
     });
-  }, [events, selectedDate]);
+  }, [events, selectedDate, timezone]);
 
-  const stats = computeWeekStats(weekEvents);
+  const stats = useMemo(() => computeWeekStats(weekEvents), [weekEvents]);
   const statParts: string[] = [];
   if (stats.sport)
     statParts.push(`${stats.sport} ${pluralRu(stats.sport, "тренировка", "тренировки", "тренировок")}`);
@@ -123,10 +123,14 @@ export function PersonalCalendar({
   if (stats.social)
     statParts.push(`${stats.social} ${pluralRu(stats.social, "событие", "события", "событий")}`);
 
-  const dayEvents = events.filter(
-    (e) => formatInTimeZone(e.starts_at, timezone, "yyyy-MM-dd") === selectedDate,
+  const dayEvents = useMemo(
+    () => events.filter((e) => formatInTimeZone(e.starts_at, timezone, "yyyy-MM-dd") === selectedDate),
+    [events, timezone, selectedDate],
   );
-  const filteredEvents = filterEventsByTab(dayEvents, filter);
+  const filteredEvents = useMemo(
+    () => filterEventsByTab(dayEvents, filter),
+    [dayEvents, filter],
+  );
 
   function navigateMonth(dir: 1 | -1) {
     const next = dir === 1 ? addMonths(monthDate, 1) : subMonths(monthDate, 1);
