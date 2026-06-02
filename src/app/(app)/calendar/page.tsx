@@ -46,5 +46,14 @@ export default async function CalendarPage({
     getDayNotes(user.id),
   ]);
 
-  return <CalendarScreen events={events} dayNotes={dayNotes} monthStr={monthStr} timezone={user.timezone} />;
+  return (
+    <CalendarScreen
+      events={events}
+      dayNotes={dayNotes}
+      monthStr={monthStr}
+      timezone={user.timezone}
+      dayStart={user.day_start || "08:00"}
+      dayEnd={user.day_end || "22:00"}
+    />
+  );
 }
