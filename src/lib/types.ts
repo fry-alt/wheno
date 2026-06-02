@@ -6,6 +6,8 @@ export interface AppUser {
   username: string | null;
   photo_url: string | null;
   timezone: string;
+  day_start: string;
+  day_end: string;
   created_at: string;
   updated_at: string;
 }

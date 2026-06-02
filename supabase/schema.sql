@@ -24,6 +24,8 @@ create table if not exists public.users (
   username    text,
   photo_url   text,
   timezone    text not null default 'Europe/Amsterdam',
+  day_start   time not null default '08:00',
+  day_end     time not null default '22:00',
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
