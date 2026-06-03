@@ -61,8 +61,11 @@ function card(eventId: string, parsed: ParsedEvent, timezone: string): { text: s
   const day = formatInTimeZone(parsed.starts_at, timezone, "d MMM");
   const start = formatInTimeZone(parsed.starts_at, timezone, "HH:mm");
   const end = formatInTimeZone(parsed.ends_at, timezone, "HH:mm");
+  const recurNote = parsed.recurrence
+    ? ` · 🔁 ${parsed.recurrence.freq === "daily" ? "каждый день" : parsed.recurrence.freq === "weekly" ? "еженедельно" : parsed.recurrence.freq === "monthly" ? "каждый месяц" : "каждый год"}`
+    : "";
   return {
-    text: `✅ <b>${parsed.title}</b>\n${categoryEmoji(parsed.category)} ${day} · ${start}–${end} · ${parsed.is_fixed ? "фиксированное" : "гибкое"}`,
+    text: `✅ <b>${parsed.title}</b>\n${categoryEmoji(parsed.category)} ${day} · ${start}–${end} · ${parsed.is_fixed ? "фиксированное" : "гибкое"}${recurNote}`,
     reply_markup: { inline_keyboard: [[{ text: "🗑 Удалить", callback_data: `del:${eventId}` }]] },
   };
 }
@@ -105,6 +108,8 @@ export async function handleBotMessage(message: TgMessage): Promise<void> {
       is_fixed: parsed.is_fixed,
       notes: parsed.notes,
       location: null,
+      recurrence: parsed.recurrence ?? null,
+      excluded_dates: [],
     });
   } catch {
     await sendMessage(message.chat.id, "Не удалось сохранить. Попробуй ещё раз.");
