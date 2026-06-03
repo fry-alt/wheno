@@ -18,6 +18,10 @@ const TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
         ends_at: { type: "string", description: "ISO 8601 with timezone offset; default +1h" },
         is_fixed: { type: "boolean", description: "true for mandatory (study/work/meeting), false for flexible" },
         notes: { type: "string", nullable: true },
+        recur_freq: { type: "string", enum: ["daily", "weekly", "monthly", "yearly"], nullable: true, description: "Repetition frequency, or omit/null for a one-off event" },
+        recur_weekdays: { type: "array", items: { type: "integer" }, nullable: true, description: "For weekly: weekdays 1=Mon..7=Sun" },
+        recur_until: { type: "string", nullable: true, description: "Repeat until this date yyyy-MM-dd, or null" },
+        recur_count: { type: "integer", nullable: true, description: "Repeat this many times, or null" },
       },
       required: ["title", "category", "starts_at", "ends_at", "is_fixed"],
     },
@@ -41,7 +45,8 @@ export async function parseEvent(
           `Return starts_at and ends_at as ISO 8601 timestamps WITH the user's timezone offset. ` +
           `If no end time is given, make it one hour after the start. ` +
           `Categories: ${CATEGORIES.join(", ")}. ` +
-          `Mark study, work, and meeting as fixed; everything else flexible unless the user implies otherwise.`,
+          `Mark study, work, and meeting as fixed; everything else flexible unless the user implies otherwise. ` +
+          `If the user implies repetition, set recur_freq (daily/weekly/monthly/yearly) and, for weekly, recur_weekdays (1=Mon..7=Sun). "каждый день"→daily, "по пн ср пт"→weekly [1,3,5], "каждый месяц"→monthly, "день рождения"/"каждый год"→yearly. Otherwise leave recur_freq null.`,
       },
       { role: "user", content: text },
     ],
@@ -64,7 +69,23 @@ export async function parseEvent(
     ends_at: string;
     is_fixed: boolean;
     notes?: string | null;
+    recur_freq?: "daily" | "weekly" | "monthly" | "yearly" | null;
+    recur_weekdays?: number[] | null;
+    recur_until?: string | null;
+    recur_count?: number | null;
   };
+
+  const recurrence = args.recur_freq
+    ? {
+        freq: args.recur_freq,
+        weekdays:
+          args.recur_freq === "weekly" && Array.isArray(args.recur_weekdays) && args.recur_weekdays.length > 0
+            ? args.recur_weekdays
+            : null,
+        until: typeof args.recur_until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.recur_until) ? args.recur_until : null,
+        count: typeof args.recur_count === "number" && args.recur_count > 0 ? Math.round(args.recur_count) : null,
+      }
+    : null;
 
   return {
     title: args.title,
@@ -73,6 +94,6 @@ export async function parseEvent(
     ends_at: new Date(args.ends_at).toISOString(),
     is_fixed: Boolean(args.is_fixed),
     notes: args.notes ?? null,
-    recurrence: null,
+    recurrence,
   };
 }
