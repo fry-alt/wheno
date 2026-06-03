@@ -73,5 +73,6 @@ export async function parseEvent(
     ends_at: new Date(args.ends_at).toISOString(),
     is_fixed: Boolean(args.is_fixed),
     notes: args.notes ?? null,
+    recurrence: null,
   };
 }

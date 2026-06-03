@@ -29,6 +29,8 @@ function ev(date: string, start: string, end: string): CalendarEvent {
     is_fixed: true,
     notes: null,
     location: null,
+    recurrence: null,
+    excluded_dates: [],
     created_at: "",
     updated_at: "",
   };

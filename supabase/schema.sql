@@ -44,6 +44,8 @@ create table if not exists public.events (
   is_fixed   boolean not null default false,
   notes      text,
   location   text,
+  recurrence     jsonb,
+  excluded_dates jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint events_time_order check (ends_at > starts_at)

@@ -2,7 +2,7 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { CalendarEvent } from "./types";
 
 const COLUMNS =
-  "id, user_id, title, starts_at, ends_at, category, is_fixed, notes, location, created_at, updated_at";
+  "id, user_id, title, starts_at, ends_at, category, is_fixed, notes, location, recurrence, excluded_dates, created_at, updated_at";
 
 export async function getEventsInRange(
   userId: string,
