@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const req = await parseRequest(text.trim(), { today, timezone: user.timezone });
 
     const { start, end } = getDateRangeUtc(req.window.from, req.window.to, user.timezone);
-    const events = await getEventsInRange(user.id, start, end);
+    const events = await getEventsInRange(user.id, start, end, user.timezone);
 
     const slots = findSlots(
       req,

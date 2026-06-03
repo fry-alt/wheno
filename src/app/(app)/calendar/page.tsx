@@ -42,7 +42,7 @@ export default async function CalendarPage({
     user.timezone,
   );
   const [events, dayNotes] = await Promise.all([
-    getEventsInRange(user.id, start, end),
+    getEventsInRange(user.id, start, end, user.timezone),
     getDayNotes(user.id),
   ]);
 
