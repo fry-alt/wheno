@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { MonthGrid } from "./month-grid";
 import { EventRow } from "./event-row";
 import { addDayNoteAction } from "@/lib/notes/actions";
-import type { CalendarEvent } from "@/lib/events/types";
+import type { EventInstance } from "@/lib/events/types";
 import type { Note } from "@/lib/notes/types";
 
 const MONTH_NAMES = [
@@ -23,11 +23,11 @@ export function DayView({
   monthStr,
   onEventClick,
 }: {
-  events: CalendarEvent[];
+  events: EventInstance[];
   dayNotes: Note[];
   timezone: string;
   monthStr: string;
-  onEventClick: (event: CalendarEvent) => void;
+  onEventClick: (event: EventInstance) => void;
 }) {
   const router = useRouter();
   const monthDate = parseISO(`${monthStr}-01`);

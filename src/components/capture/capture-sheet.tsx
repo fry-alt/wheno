@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ConfirmCard } from "./confirm-card";
-import { EventForm } from "./event-form";
+import { EventForm, type RecurringEdit } from "./event-form";
 import type { CalendarEvent, ParsedEvent } from "@/lib/events/types";
 
 type Mode = "nl" | "manual" | "confirm";
@@ -12,11 +12,13 @@ export function CaptureSheet({
   timezone,
   defaultDate,
   editing,
+  recurringEdit,
   onClose,
 }: {
   timezone: string;
   defaultDate: string;
   editing?: CalendarEvent | null;
+  recurringEdit?: RecurringEdit | null;
   onClose: () => void;
 }) {
   const [mode, setMode] = useState<Mode>(editing ? "manual" : "nl");
@@ -118,7 +120,7 @@ export function CaptureSheet({
         )}
 
         {mode === "manual" && (
-          <EventForm timezone={timezone} initialDate={defaultDate} editing={editing} prefill={editing ? null : parsed} onDone={onClose} />
+          <EventForm timezone={timezone} initialDate={defaultDate} editing={editing} prefill={editing ? null : parsed} recurringEdit={recurringEdit} onDone={onClose} />
         )}
 
         {mode === "confirm" && parsed && (

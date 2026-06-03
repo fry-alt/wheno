@@ -3,14 +3,14 @@
 import { formatInTimeZone } from "date-fns-tz";
 
 import { categoryEmoji } from "@/lib/events/categories";
-import type { CalendarEvent } from "@/lib/events/types";
+import type { EventInstance } from "@/lib/events/types";
 
 export function EventRow({
   event,
   timezone,
   onClick,
 }: {
-  event: CalendarEvent;
+  event: EventInstance;
   timezone: string;
   onClick: () => void;
 }) {
@@ -35,6 +35,7 @@ export function EventRow({
         <span className="block truncate text-sm font-semibold text-white">{event.title}</span>
         <span className="block text-xs text-[#777]">
           {start}–{end}
+          {event.series_id ? " · 🔁" : ""}
           {event.location ? ` · ${event.location}` : ""}
         </span>
       </span>
