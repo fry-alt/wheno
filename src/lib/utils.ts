@@ -55,6 +55,15 @@ export function buildInviteLink(inviteCode: string) {
   return `${getAppUrl()}/join?code=${encodeURIComponent(inviteCode)}`;
 }
 
+export function buildFriendInviteLink(code: string) {
+  const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+  const app = process.env.NEXT_PUBLIC_TELEGRAM_MINIAPP;
+  if (bot && app) {
+    return `https://t.me/${bot}/${app}?startapp=${encodeURIComponent(code)}`;
+  }
+  return `${getAppUrl()}/friends?invite=${encodeURIComponent(code)}`;
+}
+
 export function createErrorRedirect(
   pathname: string,
   params: Record<string, string | undefined> = {},

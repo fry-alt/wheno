@@ -8,6 +8,7 @@ export interface AppUser {
   timezone: string;
   day_start: string;
   day_end: string;
+  invite_code: string | null;
   created_at: string;
   updated_at: string;
 }

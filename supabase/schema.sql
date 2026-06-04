@@ -26,6 +26,7 @@ create table if not exists public.users (
   timezone    text not null default 'Europe/Amsterdam',
   day_start   time not null default '08:00',
   day_end     time not null default '22:00',
+  invite_code text unique,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -66,3 +67,16 @@ create table if not exists public.notes (
 );
 create index if not exists notes_user_date_idx on public.notes(user_id, date);
 alter table public.notes enable row level security;
+
+create table if not exists public.friendships (
+  id           uuid primary key default gen_random_uuid(),
+  requester_id uuid not null references public.users(id) on delete cascade,
+  addressee_id uuid not null references public.users(id) on delete cascade,
+  status       text not null default 'pending',
+  created_at   timestamptz not null default now(),
+  unique (requester_id, addressee_id),
+  check (requester_id <> addressee_id)
+);
+create index if not exists friendships_requester_idx on public.friendships(requester_id);
+create index if not exists friendships_addressee_idx on public.friendships(addressee_id);
+alter table public.friendships enable row level security;
