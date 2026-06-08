@@ -1,7 +1,7 @@
 import { FriendsScreen } from "@/components/friends/friends-screen";
 import { SessionBootstrap } from "@/components/session-bootstrap";
 import { getCurrentUser } from "@/lib/auth";
-import { listFriends, listIncomingRequests } from "@/lib/friends/queries";
+import { listFriends, listIncomingRequests, ensureInviteCodeForUser } from "@/lib/friends/queries";
 import { getUiPreferences } from "@/lib/preferences";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,11 @@ export default async function FriendsPage() {
     );
   }
 
-  const [friends, requests] = await Promise.all([listFriends(user.id), listIncomingRequests(user.id)]);
+  const [friends, requests, myCode] = await Promise.all([
+    listFriends(user.id),
+    listIncomingRequests(user.id),
+    ensureInviteCodeForUser(user.id),
+  ]);
 
-  return <FriendsScreen friends={friends} requests={requests} />;
+  return <FriendsScreen friends={friends} requests={requests} myCode={myCode} />;
 }
