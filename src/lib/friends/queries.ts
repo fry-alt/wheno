@@ -171,11 +171,14 @@ export async function getFriendSummary(
   };
 }
 
-/** Busy intervals only (no titles/notes) for the friend's next 7 days. */
+/**
+ * Busy intervals only (no titles/notes) for the friend's next 7 days, plus the
+ * friend's timezone so the caller can render the grid in the friend's local time.
+ */
 export async function getFriendBusy(
   userId: string,
   friendId: string,
-): Promise<{ starts_at: string; ends_at: string }[]> {
+): Promise<{ timezone: string; intervals: { starts_at: string; ends_at: string }[] }> {
   await assertFriends(userId, friendId);
   const admin = getAdminSupabase();
   const { data, error } = await admin
@@ -189,5 +192,5 @@ export async function getFriendBusy(
   const to = getLocalDateValue(timezone, 6);
   const { start, end } = getDateRangeUtc(from, to, timezone);
   const events = await getEventsInRange(friendId, start, end, timezone);
-  return events.map((e) => ({ starts_at: e.starts_at, ends_at: e.ends_at }));
+  return { timezone, intervals: events.map((e) => ({ starts_at: e.starts_at, ends_at: e.ends_at })) };
 }

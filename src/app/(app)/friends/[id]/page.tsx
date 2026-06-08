@@ -17,8 +17,7 @@ export default async function FriendProfilePage({ params }: { params: Promise<{ 
   const friend = await getFriendSummary(user.id, id);
   if (!friend) notFound();
 
-  const busy = await getFriendBusy(user.id, id);
-  const timezone = user.timezone ?? "Europe/Amsterdam";
+  const { timezone, intervals } = await getFriendBusy(user.id, id);
 
   return (
     <div className="px-4 pt-5">
@@ -40,7 +39,7 @@ export default async function FriendProfilePage({ params }: { params: Promise<{ 
 
       <section className="mb-6">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#555]">Занятость · 7 дней</p>
-        <BusyGrid busy={busy} timezone={timezone} />
+        <BusyGrid busy={intervals} timezone={timezone} />
       </section>
 
       <MeetingForm friendId={friend.user_id} />

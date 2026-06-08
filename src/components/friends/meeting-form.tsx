@@ -20,7 +20,7 @@ export function MeetingForm({ friendId }: { friendId: string }) {
   const [from, setFrom] = useState(todayPlus(0));
   const [to, setTo] = useState(todayPlus(6));
   const [part, setPart] = useState<PartOfDay>("any");
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function submit() {
@@ -34,24 +34,29 @@ export function MeetingForm({ friendId }: { friendId: string }) {
           window_to: to,
           part_of_day: part,
         });
-        setMsg("Приглашение отправлено");
+        setMsg({ ok: true, text: "Приглашение отправлено" });
         setTitle("");
         setOpen(false);
         router.refresh();
       } catch (e) {
-        setMsg(e instanceof Error ? e.message : "Не получилось");
+        setMsg({ ok: false, text: e instanceof Error ? e.message : "Не получилось" });
       }
     });
   }
 
   if (!open) {
     return (
-      <button
-        onClick={() => { setOpen(true); setMsg(null); }}
-        className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black"
-      >
-        Предложить встречу
-      </button>
+      <div>
+        <button
+          onClick={() => { setOpen(true); setMsg(null); }}
+          className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black"
+        >
+          Предложить встречу
+        </button>
+        {msg && (
+          <p className={`mt-2 text-xs ${msg.ok ? "text-green-400" : "text-red-400"}`}>{msg.text}</p>
+        )}
+      </div>
     );
   }
 
@@ -109,7 +114,7 @@ export function MeetingForm({ friendId }: { friendId: string }) {
           Отмена
         </button>
       </div>
-      {msg && <p className="text-xs text-[#999]">{msg}</p>}
+      {msg && <p className={`text-xs ${msg.ok ? "text-green-400" : "text-red-400"}`}>{msg.text}</p>}
     </div>
   );
 }
