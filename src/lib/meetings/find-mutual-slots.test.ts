@@ -19,4 +19,8 @@ describe("intersectDayHours", () => {
   it("returns null when the windows do not overlap", () => {
     expect(intersectDayHours("08:00", "12:00", "13:00", "18:00")).toBeNull();
   });
+
+  it("returns null for adjacent (touching) windows", () => {
+    expect(intersectDayHours("08:00", "12:00", "12:00", "18:00")).toBeNull();
+  });
 });

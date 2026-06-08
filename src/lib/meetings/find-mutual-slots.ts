@@ -28,11 +28,13 @@ async function getDayPrefs(userId: string): Promise<DayPrefs> {
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const row = (data as DayPrefs | null) ?? null;
+  const row = data as DayPrefs | null;
+  if (!row) throw new Error(`User ${userId} not found`);
   return {
-    day_start: row?.day_start ?? "08:00",
-    day_end: row?.day_end ?? "22:00",
-    timezone: row?.timezone ?? "Europe/Amsterdam",
+    day_start: row.day_start ?? "08:00",
+    day_end: row.day_end ?? "22:00",
+    // Matches the app's default timezone (users.timezone schema default).
+    timezone: row.timezone ?? "Europe/Amsterdam",
   };
 }
 
