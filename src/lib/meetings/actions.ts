@@ -60,6 +60,7 @@ export async function getMeetingSlots(proposalId: string): Promise<ProposedSlot[
   if (!proposal || proposal.from_user_id !== user.id || proposal.status !== "accepted") {
     throw new Error("Встреча недоступна");
   }
+  await assertFriends(user.id, proposal.to_user_id);
   const request: SlotRequest = {
     title: proposal.title,
     category: proposal.category,
@@ -86,6 +87,8 @@ export async function confirmMeeting(proposalId: string, slot: ProposedSlot): Pr
     throw new Error("Встреча недоступна");
   }
   const friendId = proposal.to_user_id;
+  // Friendship may have been dissolved after acceptance — re-check before booking.
+  await assertFriends(user.id, friendId);
 
   // Re-verify the slot is still free for BOTH (availability may have changed).
   // `user` already carries timezone + name (from requireCurrentUser → AppUser).
@@ -117,8 +120,9 @@ export async function confirmMeeting(proposalId: string, slot: ProposedSlot): Pr
     notes: `Встреча с ${friendName}`,
     location: null,
   });
+  let friendEventId: string;
   try {
-    await insertEvent({
+    friendEventId = await insertEvent({
       user_id: friendId,
       title: proposal.title,
       category: "meeting",
@@ -133,7 +137,16 @@ export async function confirmMeeting(proposalId: string, slot: ProposedSlot): Pr
     throw e;
   }
 
-  await confirmProposalSlot(user.id, proposalId, slot.starts_at, slot.ends_at);
+  // Stamp the proposal confirmed. If this fails, both calendar events would be
+  // orphaned and the proposal would stay stuck in `accepted` (the overlap re-check
+  // above would then reject any retry), so roll both events back before rethrowing.
+  try {
+    await confirmProposalSlot(user.id, proposalId, slot.starts_at, slot.ends_at);
+  } catch (e) {
+    await deleteEventById(user.id, myEventId);
+    await deleteEventById(friendId, friendEventId);
+    throw e;
+  }
   revalidatePath("/calendar");
   revalidatePath("/friends");
 }

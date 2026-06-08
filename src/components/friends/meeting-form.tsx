@@ -9,7 +9,11 @@ import type { PartOfDay } from "@/lib/meetings/types";
 function todayPlus(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  // Local calendar date (not UTC) so the default window matches the user's day.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function MeetingForm({ friendId }: { friendId: string }) {

@@ -3,24 +3,29 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { formatInTimeZone } from "date-fns-tz";
+import { ru } from "date-fns/locale";
+
 import { acceptMeeting, declineMeeting, getMeetingSlots, confirmMeeting } from "@/lib/meetings/actions";
 import type { AwaitingPick, IncomingMeeting } from "@/lib/meetings/types";
 import type { ProposedSlot } from "@/lib/advisor/types";
 
-function fmt(slot: ProposedSlot): string {
-  const d = new Date(slot.starts_at);
-  const e = new Date(slot.ends_at);
-  const date = d.toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" });
-  const t = (x: Date) => x.toTimeString().slice(0, 5);
-  return `${date}, ${t(d)}–${t(e)}`;
+// Render slot times in the user's app timezone, not the browser's.
+function fmt(slot: ProposedSlot, timezone: string): string {
+  const date = formatInTimeZone(slot.starts_at, timezone, "EEE, d MMM", { locale: ru });
+  const from = formatInTimeZone(slot.starts_at, timezone, "HH:mm");
+  const to = formatInTimeZone(slot.ends_at, timezone, "HH:mm");
+  return `${date}, ${from}–${to}`;
 }
 
 export function MeetingsSection({
   incoming,
   awaiting,
+  timezone,
 }: {
   incoming: IncomingMeeting[];
   awaiting: AwaitingPick[];
+  timezone: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -57,6 +62,7 @@ export function MeetingsSection({
   }
 
   function pick(proposalId: string, slot: ProposedSlot) {
+    setMsg(null);
     startTransition(async () => {
       try {
         await confirmMeeting(proposalId, slot);
@@ -92,7 +98,7 @@ export function MeetingsSection({
               <div className="space-y-1.5">
                 {slots.map((s) => (
                   <button key={s.starts_at} disabled={pending} onClick={() => pick(m.proposal_id, s)} className="block w-full rounded-lg bg-[#2a2a2a] px-3 py-2 text-left text-xs text-white disabled:opacity-50">
-                    {fmt(s)}
+                    {fmt(s, timezone)}
                   </button>
                 ))}
               </div>

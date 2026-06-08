@@ -37,12 +37,14 @@ export function FriendsScreen({
   myCode,
   incomingMeetings,
   awaitingPicks,
+  timezone,
 }: {
   friends: FriendSummary[];
   requests: IncomingRequest[];
   myCode: string;
   incomingMeetings: IncomingMeeting[];
   awaitingPicks: AwaitingPick[];
+  timezone: string;
 }) {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -125,7 +127,7 @@ export function FriendsScreen({
         )}
       </section>
 
-      <MeetingsSection incoming={incomingMeetings} awaiting={awaitingPicks} />
+      <MeetingsSection incoming={incomingMeetings} awaiting={awaitingPicks} timezone={timezone} />
 
       {requests.length > 0 && (
         <section className="mb-6">

@@ -35,6 +35,7 @@ export default async function FriendsPage() {
       myCode={myCode}
       incomingMeetings={incomingMeetings}
       awaitingPicks={awaitingPicks}
+      timezone={user.timezone ?? "Europe/Amsterdam"}
     />
   );
 }
