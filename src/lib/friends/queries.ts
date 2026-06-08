@@ -1,6 +1,8 @@
 import { randomInt } from "node:crypto";
 
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { getDateRangeUtc, getLocalDateValue } from "@/lib/datetime";
+import { getEventsInRange } from "@/lib/events/queries";
 import { getDisplayName } from "@/lib/utils";
 import type { Friendship, FriendSummary, IncomingRequest } from "./types";
 
@@ -143,4 +145,48 @@ export async function listIncomingRequests(userId: string): Promise<IncomingRequ
       photo_url: u?.photo_url ?? null,
     };
   });
+}
+
+export async function assertFriends(a: string, b: string): Promise<void> {
+  const friendship = await findFriendshipBetween(a, b);
+  if (!friendship || friendship.status !== "accepted") {
+    throw new Error("Вы не друзья");
+  }
+}
+
+export async function getFriendSummary(
+  userId: string,
+  friendId: string,
+): Promise<FriendSummary | null> {
+  const friendship = await findFriendshipBetween(userId, friendId);
+  if (!friendship || friendship.status !== "accepted") return null;
+  const users = await fetchUsers([friendId]);
+  const u = users.get(friendId);
+  return {
+    user_id: friendId,
+    name: u ? getDisplayName(u) : "Друг",
+    username: u?.username ?? null,
+    photo_url: u?.photo_url ?? null,
+    friendship_id: friendship.id,
+  };
+}
+
+/** Busy intervals only (no titles/notes) for the friend's next 7 days. */
+export async function getFriendBusy(
+  userId: string,
+  friendId: string,
+): Promise<{ starts_at: string; ends_at: string }[]> {
+  await assertFriends(userId, friendId);
+  const admin = getAdminSupabase();
+  const { data } = await admin
+    .from("users")
+    .select("timezone")
+    .eq("id", friendId)
+    .maybeSingle();
+  const timezone = (data as { timezone: string | null } | null)?.timezone ?? "Europe/Amsterdam";
+  const from = getLocalDateValue(timezone, 0);
+  const to = getLocalDateValue(timezone, 6);
+  const { start, end } = getDateRangeUtc(from, to, timezone);
+  const events = await getEventsInRange(friendId, start, end, timezone);
+  return events.map((e) => ({ starts_at: e.starts_at, ends_at: e.ends_at }));
 }
