@@ -80,3 +80,23 @@ create table if not exists public.friendships (
 create index if not exists friendships_requester_idx on public.friendships(requester_id);
 create index if not exists friendships_addressee_idx on public.friendships(addressee_id);
 alter table public.friendships enable row level security;
+
+create table if not exists public.meeting_proposals (
+  id           uuid primary key default gen_random_uuid(),
+  from_user_id uuid not null references public.users(id) on delete cascade,
+  to_user_id   uuid not null references public.users(id) on delete cascade,
+  title        text not null,
+  category     text not null default 'meeting',
+  duration_min int  not null,
+  window_from  date not null,
+  window_to    date not null,
+  part_of_day  text not null default 'any',
+  status       text not null default 'pending',
+  starts_at    timestamptz,
+  ends_at      timestamptz,
+  created_at   timestamptz not null default now(),
+  check (from_user_id <> to_user_id)
+);
+create index if not exists meeting_proposals_to_idx   on public.meeting_proposals(to_user_id);
+create index if not exists meeting_proposals_from_idx on public.meeting_proposals(from_user_id);
+alter table public.meeting_proposals enable row level security;
