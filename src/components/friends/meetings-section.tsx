@@ -31,6 +31,7 @@ export function MeetingsSection({
   if (incoming.length === 0 && awaiting.length === 0) return null;
 
   function act(fn: () => Promise<void>) {
+    setMsg(null);
     startTransition(async () => {
       try {
         await fn();
@@ -89,8 +90,8 @@ export function MeetingsSection({
             <p className="mb-2 text-xs text-[#3a9f6a]">принято — выбери время</p>
             {slotsFor === m.proposal_id ? (
               <div className="space-y-1.5">
-                {slots.map((s, i) => (
-                  <button key={i} disabled={pending} onClick={() => pick(m.proposal_id, s)} className="block w-full rounded-lg bg-[#2a2a2a] px-3 py-2 text-left text-xs text-white disabled:opacity-50">
+                {slots.map((s) => (
+                  <button key={s.starts_at} disabled={pending} onClick={() => pick(m.proposal_id, s)} className="block w-full rounded-lg bg-[#2a2a2a] px-3 py-2 text-left text-xs text-white disabled:opacity-50">
                     {fmt(s)}
                   </button>
                 ))}
