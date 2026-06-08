@@ -11,6 +11,9 @@ import {
 } from "@/lib/friends/actions";
 import { getInitials } from "@/lib/utils";
 import type { FriendSummary, IncomingRequest } from "@/lib/friends/types";
+import Link from "next/link";
+import { MeetingsSection } from "@/components/friends/meetings-section";
+import type { AwaitingPick, IncomingMeeting } from "@/lib/meetings/types";
 
 const REASON_TEXT: Record<string, string> = {
   empty: "Введи код",
@@ -32,10 +35,14 @@ export function FriendsScreen({
   friends,
   requests,
   myCode,
+  incomingMeetings,
+  awaitingPicks,
 }: {
   friends: FriendSummary[];
   requests: IncomingRequest[];
   myCode: string;
+  incomingMeetings: IncomingMeeting[];
+  awaitingPicks: AwaitingPick[];
 }) {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -118,6 +125,8 @@ export function FriendsScreen({
         )}
       </section>
 
+      <MeetingsSection incoming={incomingMeetings} awaiting={awaitingPicks} />
+
       {requests.length > 0 && (
         <section className="mb-6">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#555]">Запросы</p>
@@ -154,17 +163,21 @@ export function FriendsScreen({
         ) : (
           <div className="space-y-2">
             {friends.map((f) => (
-              <div key={f.friendship_id} className="flex items-center gap-3 rounded-xl bg-[#1a1a1a] px-3 py-2.5">
+              <Link
+                key={f.friendship_id}
+                href={`/friends/${f.user_id}`}
+                className="flex items-center gap-3 rounded-xl bg-[#1a1a1a] px-3 py-2.5"
+              >
                 <Avatar name={f.name} src={f.photo_url} />
                 <span className="min-w-0 flex-1 truncate text-sm text-white">{f.name}</span>
                 <button
-                  onClick={() => startTransition(async () => { await removeFriend(f.friendship_id); router.refresh(); })}
+                  onClick={(e) => { e.preventDefault(); startTransition(async () => { await removeFriend(f.friendship_id); router.refresh(); }); }}
                   className="text-xs text-[#555]"
                   aria-label="Удалить"
                 >
                   ✕
                 </button>
-              </div>
+              </Link>
             ))}
           </div>
         )}
