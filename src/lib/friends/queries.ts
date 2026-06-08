@@ -178,11 +178,12 @@ export async function getFriendBusy(
 ): Promise<{ starts_at: string; ends_at: string }[]> {
   await assertFriends(userId, friendId);
   const admin = getAdminSupabase();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("users")
     .select("timezone")
     .eq("id", friendId)
     .maybeSingle();
+  if (error) throw new Error(error.message);
   const timezone = (data as { timezone: string | null } | null)?.timezone ?? "Europe/Amsterdam";
   const from = getLocalDateValue(timezone, 0);
   const to = getLocalDateValue(timezone, 6);
