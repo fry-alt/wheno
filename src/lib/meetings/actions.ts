@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { assertFriends } from "@/lib/friends/queries";
 import { getDateRangeUtc } from "@/lib/datetime";
-import { getEventsInRange, insertEvent } from "@/lib/events/queries";
+import { deleteEventById, getEventsInRange, insertEvent } from "@/lib/events/queries";
 import { getUserById } from "@/lib/users";
 import { getDisplayName } from "@/lib/utils";
 import { findMutualSlots } from "./find-mutual-slots";
@@ -88,8 +88,8 @@ export async function confirmMeeting(proposalId: string, slot: ProposedSlot): Pr
   const friendId = proposal.to_user_id;
 
   // Re-verify the slot is still free for BOTH (availability may have changed).
-  const me = await getUserById(user.id);
-  const timezone = me?.timezone ?? "Europe/Amsterdam";
+  // `user` already carries timezone + name (from requireCurrentUser → AppUser).
+  const timezone = user.timezone ?? "Europe/Amsterdam";
   const { start, end } = getDateRangeUtc(slot.date, slot.date, timezone);
   const [myEvents, friendEvents] = await Promise.all([
     getEventsInRange(user.id, start, end, timezone),
@@ -103,9 +103,11 @@ export async function confirmMeeting(proposalId: string, slot: ProposedSlot): Pr
 
   const friend = await getUserById(friendId);
   const friendName = friend ? getDisplayName(friend) : "другом";
-  const myName = me ? getDisplayName(me) : "другом";
+  const myName = getDisplayName(user);
 
-  await insertEvent({
+  // Insert into both calendars. If the friend's insert fails, roll back the
+  // initiator's event so we never leave a half-booked meeting.
+  const myEventId = await insertEvent({
     user_id: user.id,
     title: proposal.title,
     category: "meeting",
@@ -115,16 +117,21 @@ export async function confirmMeeting(proposalId: string, slot: ProposedSlot): Pr
     notes: `Встреча с ${friendName}`,
     location: null,
   });
-  await insertEvent({
-    user_id: friendId,
-    title: proposal.title,
-    category: "meeting",
-    starts_at: slot.starts_at,
-    ends_at: slot.ends_at,
-    is_fixed: true,
-    notes: `Встреча с ${myName}`,
-    location: null,
-  });
+  try {
+    await insertEvent({
+      user_id: friendId,
+      title: proposal.title,
+      category: "meeting",
+      starts_at: slot.starts_at,
+      ends_at: slot.ends_at,
+      is_fixed: true,
+      notes: `Встреча с ${myName}`,
+      location: null,
+    });
+  } catch (e) {
+    await deleteEventById(user.id, myEventId);
+    throw e;
+  }
 
   await confirmProposalSlot(user.id, proposalId, slot.starts_at, slot.ends_at);
   revalidatePath("/calendar");
