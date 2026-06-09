@@ -11,7 +11,8 @@ import {
 
 const ORIGINAL_APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 afterEach(() => {
-  process.env.NEXT_PUBLIC_APP_URL = ORIGINAL_APP_URL;
+  if (ORIGINAL_APP_URL === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+  else process.env.NEXT_PUBLIC_APP_URL = ORIGINAL_APP_URL;
 });
 
 describe("escapeHtml", () => {
