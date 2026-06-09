@@ -11,7 +11,10 @@ import {
   acceptRequest,
   declineRequest,
   removeFriendship,
+  getFriendshipById,
 } from "./queries";
+import { getDisplayName } from "@/lib/utils";
+import { notifyUser, friendRequestMsg, friendAcceptedMsg } from "@/lib/telegram/notify";
 
 export async function ensureInviteCode(): Promise<string> {
   const user = await requireCurrentUser();
@@ -36,6 +39,7 @@ export async function sendFriendRequest(code: string): Promise<SendRequestResult
 
   // I enter a friend's code → I'm the requester, they accept/decline.
   await createPendingRequest(user.id, targetId);
+  await notifyUser(targetId, friendRequestMsg(getDisplayName(user)));
   revalidatePath("/friends");
   return { ok: true };
 }
@@ -43,6 +47,10 @@ export async function sendFriendRequest(code: string): Promise<SendRequestResult
 export async function acceptFriendRequest(friendshipId: string): Promise<void> {
   const user = await requireCurrentUser();
   await acceptRequest(user.id, friendshipId);
+  const friendship = await getFriendshipById(friendshipId);
+  if (friendship) {
+    await notifyUser(friendship.requester_id, friendAcceptedMsg(getDisplayName(user)));
+  }
   revalidatePath("/friends");
 }
 

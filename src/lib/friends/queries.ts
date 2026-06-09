@@ -194,3 +194,14 @@ export async function getFriendBusy(
   const events = await getEventsInRange(friendId, start, end, timezone);
   return { timezone, intervals: events.map((e) => ({ starts_at: e.starts_at, ends_at: e.ends_at })) };
 }
+
+export async function getFriendshipById(id: string): Promise<Friendship | null> {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin
+    .from("friendships")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as Friendship | null) ?? null;
+}
