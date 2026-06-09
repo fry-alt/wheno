@@ -6,6 +6,7 @@ import { deleteEventById, insertEvent } from "@/lib/events/queries";
 import { categoryEmoji } from "@/lib/events/categories";
 import { getUserByTelegramId, upsertTelegramUser } from "@/lib/users";
 import { normalizeTimezone } from "@/lib/telegram";
+import { sendTelegramMessage } from "@/lib/telegram/send";
 import type { ParsedEvent } from "@/lib/events/types";
 import type { AppUser } from "@/lib/types";
 
@@ -21,15 +22,6 @@ interface TgCallback {
   data?: string;
   from: { id: number };
   message?: { chat: { id: number }; message_id: number };
-}
-
-async function sendMessage(chatId: number, text: string, replyMarkup?: object): Promise<void> {
-  const { getTelegramBotToken } = await import("@/lib/env");
-  await fetch(`https://api.telegram.org/bot${getTelegramBotToken()}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }),
-  });
 }
 
 async function answerCallback(id: string): Promise<void> {
@@ -79,12 +71,12 @@ export async function handleBotMessage(message: TgMessage): Promise<void> {
     try {
       text = (await transcribeVoice(message.voice.file_id)).trim();
     } catch {
-      await sendMessage(message.chat.id, "Не расслышал, напиши текстом.");
+      await sendTelegramMessage(message.chat.id, "Не расслышал, напиши текстом.");
       return;
     }
   }
   if (!text) {
-    await sendMessage(message.chat.id, "Напиши что добавить — например: «завтра зал в 7 на час».");
+    await sendTelegramMessage(message.chat.id, "Напиши что добавить — например: «завтра зал в 7 на час».");
     return;
   }
 
@@ -93,7 +85,7 @@ export async function handleBotMessage(message: TgMessage): Promise<void> {
     const today = formatInTimeZone(new Date(), user.timezone, "yyyy-MM-dd");
     parsed = await parseEvent(text, { today, timezone: user.timezone });
   } catch {
-    await sendMessage(message.chat.id, "Не понял событие. Попробуй иначе.");
+    await sendTelegramMessage(message.chat.id, "Не понял событие. Попробуй иначе.");
     return;
   }
 
@@ -112,12 +104,12 @@ export async function handleBotMessage(message: TgMessage): Promise<void> {
       excluded_dates: [],
     });
   } catch {
-    await sendMessage(message.chat.id, "Не удалось сохранить. Попробуй ещё раз.");
+    await sendTelegramMessage(message.chat.id, "Не удалось сохранить. Попробуй ещё раз.");
     return;
   }
 
   const built = card(eventId, parsed, user.timezone);
-  await sendMessage(message.chat.id, built.text, built.reply_markup);
+  await sendTelegramMessage(message.chat.id, built.text, built.reply_markup);
 }
 
 export async function handleCallbackQuery(cb: TgCallback): Promise<void> {
@@ -131,9 +123,9 @@ export async function handleCallbackQuery(cb: TgCallback): Promise<void> {
     if (user) {
       try {
         await deleteEventById(user.id, eventId);
-        await sendMessage(cb.message.chat.id, "🗑 Удалено.");
+        await sendTelegramMessage(cb.message.chat.id, "🗑 Удалено.");
       } catch {
-        await sendMessage(cb.message.chat.id, "Не удалось удалить.");
+        await sendTelegramMessage(cb.message.chat.id, "Не удалось удалить.");
       }
     }
   }
