@@ -17,6 +17,10 @@ import {
 } from "./queries";
 import type { MeetingFormInput } from "./types";
 import type { ProposedSlot, SlotRequest } from "@/lib/advisor/types";
+import { formatInTimeZone } from "date-fns-tz";
+import { ru } from "date-fns/locale";
+import { normalizeTimezone } from "@/lib/telegram";
+import { notifyUser, meetingProposedMsg, meetingAcceptedMsg, meetingConfirmedMsg } from "@/lib/telegram/notify";
 
 const MAX_CANDIDATES = 5;
 
@@ -39,12 +43,20 @@ export async function proposeMeeting(friendId: string, form: MeetingFormInput): 
     window_to: form.window_to,
     part_of_day: form.part_of_day,
   });
+  await notifyUser(friendId, meetingProposedMsg(getDisplayName(user), title));
   revalidatePath("/friends");
 }
 
 export async function acceptMeeting(proposalId: string): Promise<void> {
   const user = await requireCurrentUser();
   await setIncomingStatus(user.id, proposalId, "accepted");
+  const proposal = await getProposal(proposalId);
+  if (proposal && proposal.status === "accepted") {
+    await notifyUser(
+      proposal.from_user_id,
+      meetingAcceptedMsg(getDisplayName(user), proposal.title),
+    );
+  }
   revalidatePath("/friends");
 }
 
@@ -147,6 +159,22 @@ export async function confirmMeeting(proposalId: string, slot: ProposedSlot): Pr
     await deleteEventById(friendId, friendEventId);
     throw e;
   }
+
+  const whenForFriend = formatInTimeZone(
+    slot.starts_at,
+    normalizeTimezone(friend?.timezone ?? timezone),
+    "EEE, d MMMM, HH:mm",
+    { locale: ru },
+  );
+  const whenForMe = formatInTimeZone(
+    slot.starts_at,
+    normalizeTimezone(timezone),
+    "EEE, d MMMM, HH:mm",
+    { locale: ru },
+  );
+  await notifyUser(friendId, meetingConfirmedMsg(myName, proposal.title, whenForFriend));
+  await notifyUser(user.id, meetingConfirmedMsg(friendName, proposal.title, whenForMe));
+
   revalidatePath("/calendar");
   revalidatePath("/friends");
 }
