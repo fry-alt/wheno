@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { ConfirmCard } from "./confirm-card";
 import { EventForm, type RecurringEdit } from "./event-form";
-import type { CalendarEvent, ParsedEvent } from "@/lib/events/types";
+import { ReviewSheet } from "./review-sheet";
+import type { CalendarEvent } from "@/lib/events/types";
+import type { VoiceAction } from "@/lib/events/voice-plan-types";
 
-type Mode = "nl" | "manual" | "confirm";
+type Mode = "nl" | "manual" | "review";
 
 export function CaptureSheet({
   timezone,
@@ -25,31 +26,35 @@ export function CaptureSheet({
   const [text, setText] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [parsed, setParsed] = useState<ParsedEvent | null>(null);
+  const [actions, setActions] = useState<VoiceAction[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const [recording, setRecording] = useState(false);
 
   useEffect(() => {
     return () => {
       if (recorderRef.current && recorderRef.current.state !== "inactive") {
-        recorderRef.current.stop(); // triggers onstop → stops mic tracks
+        recorderRef.current.stop();
       }
     };
   }, []);
 
-  async function runParse(input: string) {
+  async function runPlan(input: string) {
     setError(null);
     setPending(true);
     try {
-      const res = await fetch("/api/parse-event", {
+      const res = await fetch("/api/voice-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input }),
       });
       if (!res.ok) throw new Error();
-      const { parsed: p } = (await res.json()) as { parsed: ParsedEvent };
-      setParsed(p);
-      setMode("confirm");
+      const { actions: a } = (await res.json()) as { actions: VoiceAction[] };
+      if (!a || a.length === 0) {
+        setError("Не понял. Попробуй иначе или добавь вручную.");
+        return;
+      }
+      setActions(a);
+      setMode("review");
     } catch {
       setError("Не понял. Попробуй иначе или добавь вручную.");
     } finally {
@@ -79,7 +84,7 @@ export function CaptureSheet({
           if (!res.ok) throw new Error();
           const { text: transcript } = (await res.json()) as { text: string };
           setText(transcript);
-          await runParse(transcript);
+          await runPlan(transcript);
         } catch {
           setError("Не расслышал. Напиши текстом.");
           setPending(false);
@@ -93,44 +98,38 @@ export function CaptureSheet({
     }
   }
 
-  const inputCls = "w-full rounded-xl bg-[#1a1a1a] px-4 py-3 text-sm text-white placeholder-[#555] outline-none";
+  const inputCls = "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder-muted outline-none";
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60" onClick={onClose}>
-      <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-[#111] p-5 pb-10" onClick={(e) => e.stopPropagation()}>
-        {mode !== "confirm" && !editing && (
+      <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl border-t border-border bg-card-strong p-5 pb-10" onClick={(e) => e.stopPropagation()}>
+        {mode !== "review" && !editing && (
           <div className="mb-4 flex gap-2">
-            <button onClick={() => setMode("nl")} className="rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: mode === "nl" ? "#fff" : "#1a1a1a", color: mode === "nl" ? "#000" : "#888" }}>Текстом / голосом</button>
-            <button onClick={() => setMode("manual")} className="rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: mode === "manual" ? "#fff" : "#1a1a1a", color: mode === "manual" ? "#000" : "#888" }}>Вручную</button>
+            <button onClick={() => setMode("nl")} className="rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: mode === "nl" ? "var(--color-foreground)" : "var(--color-card)", color: mode === "nl" ? "var(--color-background)" : "var(--color-muted)" }}>Текстом / голосом</button>
+            <button onClick={() => setMode("manual")} className="rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: mode === "manual" ? "var(--color-foreground)" : "var(--color-card)", color: mode === "manual" ? "var(--color-background)" : "var(--color-muted)" }}>Вручную</button>
           </div>
         )}
 
         {mode === "nl" && (
           <div className="flex flex-col gap-3">
-            <p className="text-sm font-semibold text-white">Что добавить?</p>
+            <p className="text-sm font-semibold text-foreground">Что добавить или изменить?</p>
             <div className="flex gap-2">
-              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="завтра зал в 7 на час" className={`${inputCls} flex-1`} />
-              <button onClick={toggleRecording} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#1a1a1a] text-lg" aria-label="Голос">{recording ? "⏹️" : "🎤"}</button>
+              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="завтра зал в 7, перенеси созвон на 15, удали ужин в чт" className={`${inputCls} flex-1`} />
+              <button onClick={toggleRecording} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-border bg-card text-lg" aria-label="Голос">{recording ? "⏹️" : "🎤"}</button>
             </div>
             {error && <p className="text-center text-xs text-red-400">{error}</p>}
-            <button onClick={() => runParse(text)} disabled={pending || !text.trim()} className="rounded-xl bg-white py-3 text-sm font-semibold text-black disabled:opacity-50">
+            <button onClick={() => runPlan(text)} disabled={pending || !text.trim()} className="rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground disabled:opacity-50">
               {pending ? "Думаю…" : "Разобрать"}
             </button>
           </div>
         )}
 
         {mode === "manual" && (
-          <EventForm timezone={timezone} initialDate={defaultDate} editing={editing} prefill={editing ? null : parsed} recurringEdit={recurringEdit} onDone={onClose} />
+          <EventForm timezone={timezone} initialDate={defaultDate} editing={editing} prefill={null} recurringEdit={recurringEdit} onDone={onClose} />
         )}
 
-        {mode === "confirm" && parsed && (
-          <ConfirmCard
-            parsed={parsed}
-            timezone={timezone}
-            onConfirmed={onClose}
-            onEdit={() => setMode("manual")}
-            onCancel={onClose}
-          />
+        {mode === "review" && (
+          <ReviewSheet actions={actions} timezone={timezone} onClose={onClose} />
         )}
       </div>
     </div>
