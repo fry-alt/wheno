@@ -1,11 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { addMonths, format, parseISO, subMonths } from "date-fns";
+import { addMonths, addWeeks, addYears, format, parseISO, subMonths, subWeeks, subYears } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { useRouter } from "next/navigation";
 
 import { MonthView } from "./month-view";
+import { WeekView } from "./week-view";
+import { YearView } from "./year-view";
+import { ViewSwitcher } from "./view-switcher";
 import { ScopeDialog } from "./scope-dialog";
 import { CaptureSheet } from "@/components/capture/capture-sheet";
 import { AdvisorSheet } from "@/components/advisor/advisor-sheet";
@@ -55,11 +58,28 @@ export function CalendarScreen({
     router.push(`/calendar?view=${nextView}&date=${nextDate}`);
   }
 
+  function switchView(next: CalendarView) {
+    pushView(next, selectedDate);
+  }
   function navigateMonth(dir: 1 | -1) {
     const base = parseISO(`${anchor.slice(0, 7)}-01`);
     const next = dir === 1 ? addMonths(base, 1) : subMonths(base, 1);
     pushView("month", format(next, "yyyy-MM-01"));
   }
+  function navigateWeek(dir: 1 | -1) {
+    const base = parseISO(anchor);
+    const next = dir === 1 ? addWeeks(base, 1) : subWeeks(base, 1);
+    pushView("week", format(next, "yyyy-MM-dd"));
+  }
+  function navigateYear(dir: 1 | -1) {
+    const base = parseISO(anchor);
+    const next = dir === 1 ? addYears(base, 1) : subYears(base, 1);
+    pushView("year", format(next, "yyyy-MM-dd"));
+  }
+  function selectMonth(monthStr: string) {
+    pushView("month", `${monthStr}-01`);
+  }
+  const currentMonthStr = formatInTimeZone(new Date(), timezone, "yyyy-MM");
 
   function openEditor(instance: EventInstance, scope: "one" | "all" | null) {
     setEditing(instance);
@@ -82,7 +102,9 @@ export function CalendarScreen({
 
   return (
     <>
-      {view === "month" ? (
+      <ViewSwitcher value={view} onChange={switchView} />
+
+      {view === "month" && (
         <MonthView
           dayNotes={dayNotes}
           timezone={timezone}
@@ -94,8 +116,24 @@ export function CalendarScreen({
           onNavigateMonth={navigateMonth}
           onEventClick={onEventClick}
         />
-      ) : (
-        <div className="px-4 py-16 text-center text-sm text-muted">Скоро…</div>
+      )}
+      {view === "week" && (
+        <WeekView
+          anchor={anchor}
+          events={events}
+          timezone={timezone}
+          todayStr={todayStr}
+          onNavigateWeek={navigateWeek}
+          onEventClick={onEventClick}
+        />
+      )}
+      {view === "year" && (
+        <YearView
+          year={Number(anchor.slice(0, 4))}
+          currentMonth={currentMonthStr}
+          onSelectMonth={selectMonth}
+          onNavigateYear={navigateYear}
+        />
       )}
 
       <button onClick={() => setAdvisorOpen(true)} className="fixed bottom-44 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-card-strong text-2xl shadow-lg" aria-label="Найти время">✨</button>
