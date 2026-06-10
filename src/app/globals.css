@@ -22,9 +22,10 @@
   --foreground:        var(--tg-text);
   --card:              var(--tg-section-bg);
   --card-muted:        color-mix(in srgb, var(--tg-secondary-bg) 100%, transparent);
-  --card-strong:       var(--tg-bg);
+  --card-strong:       color-mix(in srgb, var(--tg-section-bg) 100%, #ffffff 6%);
   --muted:             var(--tg-subtitle);
-  --border:            color-mix(in srgb, var(--tg-hint) 22%, transparent);
+  --text-faint:        color-mix(in srgb, var(--tg-subtitle) 60%, transparent);
+  --border:            color-mix(in srgb, #ffffff 8%, transparent);
   --accent:            var(--tg-button);
   --accent-foreground: var(--tg-button-text);
   --accent-soft:       color-mix(in srgb, var(--tg-button) 14%, transparent);
@@ -33,22 +34,23 @@
   --success:           #34c759;
   --success-soft:      color-mix(in srgb, #34c759 14%, transparent);
   --glow-start:        color-mix(in srgb, var(--tg-button) 18%, transparent);
+  --accent-glow:       color-mix(in srgb, var(--tg-button) 35%, transparent);
 }
 
 /* ─── Explicit dark fallbacks for when running outside Telegram ─────────── */
 :root[data-theme="dark"] {
-  --tg-bg:           #1c1c1e;
-  --tg-secondary-bg: #2c2c2e;
-  --tg-text:         #ffffff;
-  --tg-hint:         #8e8e93;
-  --tg-link:         #2481cc;
-  --tg-button:       #2481cc;
+  --tg-bg:           #0c0c0e;
+  --tg-secondary-bg: #161618;
+  --tg-text:         #f5f5f7;
+  --tg-hint:         #8a8a92;
+  --tg-link:         #5b7cfa;
+  --tg-button:       #5b7cfa;
   --tg-button-text:  #ffffff;
-  --tg-accent:       #2481cc;
-  --tg-section-bg:   #1c1c1e;
-  --tg-subtitle:     #8e8e93;
+  --tg-accent:       #5b7cfa;
+  --tg-section-bg:   #161618;
+  --tg-subtitle:     #8a8a92;
   --tg-destructive:  #ff453a;
-  --tg-header-bg:    #1c1c1e;
+  --tg-header-bg:    #0c0c0e;
 }
 
 @theme inline {
@@ -58,6 +60,7 @@
   --color-card-strong:       var(--card-strong);
   --color-card-muted:        var(--card-muted);
   --color-muted:             var(--muted);
+  --color-text-faint:        var(--text-faint);
   --color-border:            var(--border);
   --color-accent:            var(--accent);
   --color-accent-foreground: var(--accent-foreground);
@@ -66,6 +69,7 @@
   --color-danger-soft:       var(--danger-soft);
   --color-success:           var(--success);
   --color-success-soft:      var(--success-soft);
+  --color-accent-glow:       var(--accent-glow);
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
