@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CATEGORIES, CATEGORY_EMOJI, CATEGORY_DEFAULT_FIXED, CATEGORY_LABEL_RU, categoryEmoji } from "./categories";
+import { CATEGORIES, CATEGORY_EMOJI, CATEGORY_DEFAULT_FIXED, CATEGORY_LABEL_RU, CATEGORY_COLOR, categoryEmoji, categoryColor } from "./categories";
 
 describe("categories", () => {
   it("every category has an emoji, a default fixedness, and a RU label", () => {
@@ -20,5 +20,16 @@ describe("categories", () => {
   it("categoryEmoji falls back to 📌 for unknown", () => {
     expect(categoryEmoji("nonsense")).toBe("📌");
     expect(categoryEmoji("gym")).toBe("🏋️");
+  });
+
+  it("every category has a hex color", () => {
+    for (const c of CATEGORIES) {
+      expect(CATEGORY_COLOR[c], `color for ${c}`).toMatch(/^#[0-9a-fA-F]{6}$/);
+    }
+  });
+
+  it("categoryColor falls back to the 'other' color for unknown", () => {
+    expect(categoryColor("nonsense")).toBe(CATEGORY_COLOR.other);
+    expect(categoryColor("gym")).toBe(CATEGORY_COLOR.gym);
   });
 });
