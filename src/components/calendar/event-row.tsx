@@ -2,7 +2,7 @@
 
 import { formatInTimeZone } from "date-fns-tz";
 
-import { categoryEmoji } from "@/lib/events/categories";
+import { categoryEmoji, categoryColor } from "@/lib/events/categories";
 import type { EventInstance } from "@/lib/events/types";
 
 export function EventRow({
@@ -16,25 +16,25 @@ export function EventRow({
 }) {
   const start = formatInTimeZone(event.starts_at, timezone, "HH:mm");
   const end = formatInTimeZone(event.ends_at, timezone, "HH:mm");
+  const color = categoryColor(event.category);
 
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-xl bg-[#1a1a1a] px-3 py-3 text-left"
+      className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-3 py-3 text-left transition active:scale-[0.99] active:bg-card-strong"
     >
       <span
-        className="h-9 w-1 flex-shrink-0 rounded-full"
-        style={
-          event.is_fixed
-            ? { background: "#3b82f6" }
-            : { background: "transparent", borderLeft: "2px dashed #555", borderRadius: 0 }
-        }
+        className="h-9 w-1.5 flex-shrink-0 rounded-full"
+        style={{
+          background: event.is_fixed ? color : "transparent",
+          border: event.is_fixed ? undefined : `1.5px solid ${color}`,
+        }}
       />
       <span className="text-lg">{categoryEmoji(event.category)}</span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-white">{event.title}</span>
-        <span className="block text-xs text-[#777]">
-          {start}–{end}
+        <span className="block truncate text-sm font-semibold text-foreground">{event.title}</span>
+        <span className="block text-xs text-muted">
+          <span className="tabular-nums">{start}–{end}</span>
           {event.series_id ? " · 🔁" : ""}
           {event.location ? ` · ${event.location}` : ""}
         </span>
