@@ -8,6 +8,7 @@ const TABS = [
   { href: "/calendar", emoji: "📅", label: "Календарь" },
   { href: "/friends", emoji: "👥", label: "Друзья" },
   { href: "/notes", emoji: "📝", label: "Заметки" },
+  { href: "/profile", emoji: "👤", label: "Профиль" },
 ];
 
 export function BottomNav() {
