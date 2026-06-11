@@ -3,9 +3,12 @@ import { notFound } from "next/navigation";
 
 import { BusyGrid } from "@/components/friends/busy-grid";
 import { MeetingForm } from "@/components/friends/meeting-form";
+import { ProfileView } from "@/components/profile/profile-view";
 import { getCurrentUser } from "@/lib/auth";
 import { getFriendBusy, getFriendSummary } from "@/lib/friends/queries";
+import { getPublicProfile } from "@/lib/profile/queries";
 import { getInitials } from "@/lib/utils";
+import { formatInTimeZone } from "date-fns-tz";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +21,8 @@ export default async function FriendProfilePage({ params }: { params: Promise<{ 
   if (!friend) notFound();
 
   const { timezone, intervals } = await getFriendBusy(user.id, id);
+  const today = formatInTimeZone(new Date(), user.timezone, "yyyy-MM-dd");
+  const publicProfile = await getPublicProfile(id, today);
 
   return (
     <div className="px-4 pt-5">
@@ -36,6 +41,10 @@ export default async function FriendProfilePage({ params }: { params: Promise<{ 
           {friend.username && <p className="truncate text-sm text-[#555]">@{friend.username}</p>}
         </div>
       </div>
+
+      <section className="mb-6">
+        <ProfileView profile={publicProfile} />
+      </section>
 
       <section className="mb-6">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#555]">Занятость · 7 дней</p>
