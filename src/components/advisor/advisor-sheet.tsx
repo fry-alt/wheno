@@ -6,6 +6,7 @@ import { ru } from "date-fns/locale";
 
 import { categoryEmoji } from "@/lib/events/categories";
 import { createPlanAction, updateDayHoursAction } from "@/lib/advisor/actions";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import type { Category } from "@/lib/events/types";
 import type { ProposedSlot } from "@/lib/advisor/types";
 
@@ -94,8 +95,7 @@ export function AdvisorSheet({
   const selectedCount = selected.size;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60" onClick={onClose}>
-      <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-[#111] p-5 pb-10" onClick={(e) => e.stopPropagation()}>
+    <BottomSheet onClose={onClose}>
         <div className="mb-4 flex items-center justify-between">
           <span className="text-sm font-semibold text-white">✨ Найти время</span>
           <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2a2a2a] text-xs text-[#999]">✕</button>
@@ -156,7 +156,6 @@ export function AdvisorSheet({
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </BottomSheet>
   );
 }
