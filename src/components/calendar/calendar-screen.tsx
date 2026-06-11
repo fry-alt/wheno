@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { addMonths, addWeeks, addYears, format, parseISO, subMonths, subWeeks, subYears } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { useRouter } from "next/navigation";
+import { clsx } from "clsx";
 
 import { MonthView } from "./month-view";
 import { WeekView } from "./week-view";
@@ -35,6 +36,7 @@ export function CalendarScreen({
   dayEnd: string;
 }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [selectedDate, setSelectedDate] = useState(anchor);
   const [editing, setEditing] = useState<EventInstance | null>(null);
   const [recurringEdit, setRecurringEdit] = useState<RecurringEdit | null>(null);
@@ -55,7 +57,7 @@ export function CalendarScreen({
   );
 
   function pushView(nextView: CalendarView, nextDate: string) {
-    router.push(`/calendar?view=${nextView}&date=${nextDate}`);
+    startTransition(() => router.push(`/calendar?view=${nextView}&date=${nextDate}`));
   }
 
   function switchView(next: CalendarView) {
@@ -102,42 +104,56 @@ export function CalendarScreen({
 
   return (
     <>
+      {isPending && (
+        <div className="fixed inset-x-0 top-0 z-40 h-0.5 overflow-hidden">
+          <span className="block h-full w-1/4 rounded-full bg-accent animate-[barSlide_0.9s_ease-in-out_infinite]" />
+        </div>
+      )}
+
       <ViewSwitcher value={view} onChange={switchView} />
 
-      {view === "month" && (
-        <MonthView
-          dayNotes={dayNotes}
-          timezone={timezone}
-          anchorMonth={anchor.slice(0, 7)}
-          selectedDate={selectedDate}
-          daysWithEvents={daysWithEvents}
-          dayEvents={dayEvents}
-          onSelectDate={setSelectedDate}
-          onNavigateMonth={navigateMonth}
-          onEventClick={onEventClick}
-        />
-      )}
-      {view === "week" && (
-        <WeekView
-          anchor={anchor}
-          events={events}
-          timezone={timezone}
-          todayStr={todayStr}
-          onNavigateWeek={navigateWeek}
-          onEventClick={onEventClick}
-        />
-      )}
-      {view === "year" && (
-        <YearView
-          year={Number(anchor.slice(0, 4))}
-          currentMonth={currentMonthStr}
-          onSelectMonth={selectMonth}
-          onNavigateYear={navigateYear}
-        />
-      )}
+      <div
+        key={`${view}-${anchor}`}
+        className={clsx(
+          "animate-[fadeRise_200ms_ease-out]",
+          isPending && "pointer-events-none opacity-60 transition-opacity",
+        )}
+      >
+        {view === "month" && (
+          <MonthView
+            dayNotes={dayNotes}
+            timezone={timezone}
+            anchorMonth={anchor.slice(0, 7)}
+            selectedDate={selectedDate}
+            daysWithEvents={daysWithEvents}
+            dayEvents={dayEvents}
+            onSelectDate={setSelectedDate}
+            onNavigateMonth={navigateMonth}
+            onEventClick={onEventClick}
+          />
+        )}
+        {view === "week" && (
+          <WeekView
+            anchor={anchor}
+            events={events}
+            timezone={timezone}
+            todayStr={todayStr}
+            onNavigateWeek={navigateWeek}
+            onEventClick={onEventClick}
+          />
+        )}
+        {view === "year" && (
+          <YearView
+            year={Number(anchor.slice(0, 4))}
+            currentMonth={currentMonthStr}
+            onSelectMonth={selectMonth}
+            onNavigateYear={navigateYear}
+          />
+        )}
+      </div>
 
-      <button onClick={() => setAdvisorOpen(true)} className="fixed bottom-44 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-card-strong text-2xl shadow-lg" aria-label="Найти время">✨</button>
-      <button onClick={() => { setEditing(null); setRecurringEdit(null); setSheetOpen(true); }} className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-bold text-accent-foreground shadow-lg" aria-label="Добавить">+</button>
+      <button onClick={() => setAdvisorOpen(true)} className="fixed bottom-44 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-card-strong text-2xl shadow-lg transition active:scale-95" aria-label="Найти время">✨</button>
+      <button onClick={() => { setEditing(null); setRecurringEdit(null); setSheetOpen(true); }} className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-bold text-accent-foreground shadow-lg transition active:scale-95" aria-label="Добавить">+</button>
 
       {sheetOpen && (
         <CaptureSheet timezone={timezone} defaultDate={selectedDate || todayStr} editing={editing} recurringEdit={recurringEdit} onClose={closeSheet} />
