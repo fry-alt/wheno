@@ -9,6 +9,7 @@ const TABS = [
   { href: "/friends", emoji: "👥", label: "Друзья" },
   { href: "/notes", emoji: "📝", label: "Заметки" },
   { href: "/profile", emoji: "👤", label: "Профиль" },
+  { href: "/activities", emoji: "🤸", label: "Движ" },
 ];
 
 export function BottomNav() {
