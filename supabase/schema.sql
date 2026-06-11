@@ -100,3 +100,29 @@ create table if not exists public.meeting_proposals (
 create index if not exists meeting_proposals_to_idx   on public.meeting_proposals(to_user_id);
 create index if not exists meeting_proposals_from_idx on public.meeting_proposals(from_user_id);
 alter table public.meeting_proposals enable row level security;
+
+create table if not exists public.profiles (
+  user_id     uuid primary key references public.users(id) on delete cascade,
+  bio         text,
+  city        text,
+  birthdate   date,
+  gender      text,
+  show_age    boolean not null default true,
+  show_gender boolean not null default true,
+  interests   text[] not null default '{}',
+  updated_at  timestamptz not null default now()
+);
+alter table public.profiles enable row level security;
+drop trigger if exists profiles_set_updated_at on public.profiles;
+create trigger profiles_set_updated_at before update on public.profiles
+  for each row execute function public.set_updated_at();
+
+create table if not exists public.profile_photos (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references public.users(id) on delete cascade,
+  storage_path text not null,
+  position     int  not null default 0,
+  created_at   timestamptz not null default now()
+);
+create index if not exists profile_photos_user_idx on public.profile_photos(user_id, position);
+alter table public.profile_photos enable row level security;
