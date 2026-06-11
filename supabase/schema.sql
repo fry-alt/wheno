@@ -126,3 +126,49 @@ create table if not exists public.profile_photos (
 );
 create index if not exists profile_photos_user_idx on public.profile_photos(user_id, position);
 alter table public.profile_photos enable row level security;
+
+create table if not exists public.activities (
+  id          uuid primary key default gen_random_uuid(),
+  host_id     uuid not null references public.users(id) on delete cascade,
+  title       text not null,
+  type        text not null,
+  description text,
+  place       text,
+  starts_at   timestamptz not null,
+  ends_at     timestamptz not null,
+  capacity    int,
+  visibility  text not null default 'public',
+  status      text not null default 'open',
+  created_at  timestamptz not null default now(),
+  constraint activities_time_order check (ends_at > starts_at)
+);
+create index if not exists activities_starts_idx on public.activities(starts_at);
+alter table public.activities enable row level security;
+
+create table if not exists public.activity_participants (
+  id          uuid primary key default gen_random_uuid(),
+  activity_id uuid not null references public.activities(id) on delete cascade,
+  user_id     uuid not null references public.users(id) on delete cascade,
+  event_id    uuid,
+  joined_at   timestamptz not null default now(),
+  unique (activity_id, user_id)
+);
+create index if not exists activity_participants_user_idx on public.activity_participants(user_id);
+alter table public.activity_participants enable row level security;
+
+create table if not exists public.user_blocks (
+  blocker_id uuid not null references public.users(id) on delete cascade,
+  blocked_id uuid not null references public.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (blocker_id, blocked_id)
+);
+alter table public.user_blocks enable row level security;
+
+create table if not exists public.activity_reports (
+  id          uuid primary key default gen_random_uuid(),
+  reporter_id uuid not null references public.users(id) on delete cascade,
+  activity_id uuid not null references public.activities(id) on delete cascade,
+  reason      text,
+  created_at  timestamptz not null default now()
+);
+alter table public.activity_reports enable row level security;
