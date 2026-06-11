@@ -37,8 +37,9 @@ export function YearView({
             <button
               key={monthStr}
               onClick={() => onSelectMonth(monthStr)}
+              style={{ animationDelay: `${i * 20}ms` }}
               className={clsx(
-                "rounded-2xl border bg-card p-2 text-left transition active:scale-[0.98]",
+                "animate-[fadeRise_200ms_ease-out] [animation-fill-mode:backwards] rounded-2xl border bg-card p-2 text-left transition active:scale-[0.98]",
                 isCurrent ? "border-accent" : "border-border",
               )}
             >

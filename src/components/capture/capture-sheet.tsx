@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { EventForm, type RecurringEdit } from "./event-form";
 import { ReviewSheet } from "./review-sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import type { CalendarEvent } from "@/lib/events/types";
 import type { VoiceAction } from "@/lib/events/voice-plan-types";
 
@@ -101,8 +102,7 @@ export function CaptureSheet({
   const inputCls = "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder-muted outline-none";
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60" onClick={onClose}>
-      <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl border-t border-border bg-card-strong p-5 pb-10" onClick={(e) => e.stopPropagation()}>
+    <BottomSheet onClose={onClose}>
         {mode !== "review" && !editing && (
           <div className="mb-4 flex gap-2">
             <button onClick={() => setMode("nl")} className="rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: mode === "nl" ? "var(--color-foreground)" : "var(--color-card)", color: mode === "nl" ? "var(--color-background)" : "var(--color-muted)" }}>Текстом / голосом</button>
@@ -131,7 +131,6 @@ export function CaptureSheet({
         {mode === "review" && (
           <ReviewSheet actions={actions} timezone={timezone} onClose={onClose} />
         )}
-      </div>
-    </div>
+    </BottomSheet>
   );
 }

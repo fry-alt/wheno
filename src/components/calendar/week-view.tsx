@@ -47,12 +47,16 @@ export function WeekView({
       </div>
 
       <div className="flex flex-col gap-4 px-4 pb-4">
-        {days.map((day) => {
+        {days.map((day, i) => {
           const key = format(day, "yyyy-MM-dd");
           const dayEvents = byDay.get(key) ?? [];
           const isToday = key === todayStr;
           return (
-            <div key={key}>
+            <div
+              key={key}
+              className="animate-[fadeRise_200ms_ease-out] [animation-fill-mode:backwards]"
+              style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
+            >
               <div className="mb-1.5 flex items-baseline gap-2">
                 <span className={isToday ? "text-sm font-bold text-accent" : "text-sm font-bold text-foreground"}>
                   {WEEKDAY[day.getDay()]} <span className="tabular-nums">{day.getDate()}</span>

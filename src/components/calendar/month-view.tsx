@@ -95,7 +95,15 @@ export function MonthView({
             <p className="mt-1 text-xs text-muted">Нажми ➕ чтобы добавить</p>
           </div>
         ) : (
-          dayEvents.map((e) => <EventRow key={e.id} event={e} timezone={timezone} onClick={() => onEventClick(e)} />)
+          dayEvents.map((e, i) => (
+            <div
+              key={e.id}
+              className="animate-[fadeRise_200ms_ease-out] [animation-fill-mode:backwards]"
+              style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
+            >
+              <EventRow event={e} timezone={timezone} onClick={() => onEventClick(e)} />
+            </div>
+          ))
         )}
       </div>
     </div>
