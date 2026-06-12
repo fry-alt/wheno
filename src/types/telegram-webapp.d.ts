@@ -11,6 +11,9 @@ declare global {
             language_code?: string;
           };
         };
+        expand?: () => void;
+        disableVerticalSwipes?: () => void;
+        isVerticalSwipesEnabled?: boolean;
       };
     };
   }

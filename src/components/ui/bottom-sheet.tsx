@@ -16,7 +16,7 @@ export function BottomSheet({
     <div className="fixed inset-0 z-50 bg-black/60 animate-[fadeIn_150ms_ease-out]" onClick={onClose}>
       <div
         className={clsx(
-          "absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-border bg-card-strong p-5 pb-10",
+          "absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-border bg-card-strong p-5 pb-10",
           "animate-[slideUp_250ms_cubic-bezier(0.22,1,0.36,1)]",
           className,
         )}

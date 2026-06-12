@@ -108,6 +108,14 @@ select {
   font: inherit;
 }
 
+/* Mobile WebKit renders date/time inputs at an intrinsic width that can overflow
+   a narrow container — clamp them to their box. */
+input[type="date"],
+input[type="time"] {
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* ─── Motion ─────────────────────────────────────────────────────────────── */
 @keyframes fadeRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes slideUp  { from { transform: translateY(100%); } to { transform: translateY(0); } }
