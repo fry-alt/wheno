@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, Manrope } from "next/font/google";
 
 import { getUiPreferences } from "@/lib/preferences";
+import { PreferenceSync } from "@/components/preference-sync";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -25,7 +26,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { language, theme } = await getUiPreferences();
+  const { language, theme, themePref, languagePref } = await getUiPreferences();
 
   return (
     <html
@@ -34,7 +35,10 @@ export default async function RootLayout({
       data-theme={theme}
       suppressHydrationWarning
     >
-      <body className="min-h-full font-sans antialiased">{children}</body>
+      <body className="min-h-full font-sans antialiased">
+        <PreferenceSync themePref={themePref} languagePref={languagePref} />
+        {children}
+      </body>
     </html>
   );
 }

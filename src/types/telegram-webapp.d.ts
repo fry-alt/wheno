@@ -5,6 +5,12 @@ declare global {
     Telegram?: {
       WebApp?: {
         initData?: string;
+        colorScheme?: "light" | "dark";
+        initDataUnsafe?: {
+          user?: {
+            language_code?: string;
+          };
+        };
       };
     };
   }

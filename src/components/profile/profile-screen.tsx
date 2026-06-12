@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { PhotoGallery } from "./photo-gallery";
 import { InterestPicker } from "./interest-picker";
@@ -43,7 +44,16 @@ export function ProfileScreen({ profile, displayName }: { profile: ProfileWithPh
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-5 pb-8 animate-[fadeRise_300ms_ease-out]">
-      <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+        <Link
+          href="/settings"
+          aria-label="Настройки"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-lg transition active:scale-90"
+        >
+          ⚙️
+        </Link>
+      </div>
 
       <section className="flex flex-col gap-2">
         <SectionLabel>Фотографии</SectionLabel>
