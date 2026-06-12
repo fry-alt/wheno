@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { formatInTimeZone } from "date-fns-tz";
 
 import { INTEREST_TAGS } from "@/lib/profile/interests";
 import { haptic } from "@/lib/haptics";
-import { createActivityAction } from "@/lib/activities/actions";
-import type { Visibility } from "@/lib/activities/types";
+import { createActivityAction, updateActivityAction } from "@/lib/activities/actions";
+import type { Activity, Visibility } from "@/lib/activities/types";
 import type { LatLng } from "./location-picker";
 
 const LocationPicker = dynamic(() => import("./location-picker").then((m) => m.LocationPicker), {
@@ -15,31 +16,50 @@ const LocationPicker = dynamic(() => import("./location-picker").then((m) => m.L
   loading: () => <div className="skeleton h-56 w-full rounded-xl" />,
 });
 
-export function ActivityForm({ onClose }: { onClose: () => void }) {
+export function ActivityForm({
+  onClose,
+  timezone,
+  editing = null,
+}: {
+  onClose: () => void;
+  timezone: string;
+  editing?: Activity | null;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState("running");
-  const [place, setPlace] = useState("");
-  const [loc, setLoc] = useState<LatLng | null>(null);
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("10:00");
-  const [endTime, setEndTime] = useState("11:00");
-  const [capacity, setCapacity] = useState("");
-  const [visibility, setVisibility] = useState<Visibility>("public");
+  const [title, setTitle] = useState(editing?.title ?? "");
+  const [type, setType] = useState(editing?.type ?? "running");
+  const [place, setPlace] = useState(editing?.place ?? "");
+  const [loc, setLoc] = useState<LatLng | null>(
+    editing && editing.lat != null && editing.lng != null ? { lat: editing.lat, lng: editing.lng } : null,
+  );
+  const [description, setDescription] = useState(editing?.description ?? "");
+  const [date, setDate] = useState(editing ? formatInTimeZone(editing.starts_at, timezone, "yyyy-MM-dd") : "");
+  const [startTime, setStartTime] = useState(editing ? formatInTimeZone(editing.starts_at, timezone, "HH:mm") : "10:00");
+  const [endTime, setEndTime] = useState(editing ? formatInTimeZone(editing.ends_at, timezone, "HH:mm") : "11:00");
+  const [capacity, setCapacity] = useState(editing?.capacity != null ? String(editing.capacity) : "");
+  const [visibility, setVisibility] = useState<Visibility>(editing?.visibility ?? "public");
   const [error, setError] = useState<string | null>(null);
 
   const inputCls = "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder-muted outline-none";
 
   function submit() {
     if (!title.trim() || !date) { setError("Заполни название и дату"); return; }
+    const payload = {
+      title, type, place, description, date, startTime, endTime,
+      lat: loc?.lat ?? null, lng: loc?.lng ?? null,
+      capacity: capacity ? Number(capacity) : null, visibility,
+    };
     start(async () => {
-      const res = await createActivityAction({
-        title, type, place, description, date, startTime, endTime,
-        lat: loc?.lat ?? null, lng: loc?.lng ?? null,
-        capacity: capacity ? Number(capacity) : null, visibility,
-      });
+      if (editing) {
+        const res = await updateActivityAction(editing.id, payload);
+        if (!res.ok) { haptic.error(); setError("Не получилось"); return; }
+        haptic.success();
+        router.refresh();
+        onClose();
+        return;
+      }
+      const res = await createActivityAction(payload);
       if (!res.ok || !res.id) { haptic.error(); setError("Не получилось"); return; }
       haptic.success();
       router.push(`/activities/${res.id}`);
@@ -48,7 +68,7 @@ export function ActivityForm({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm font-semibold text-foreground">Новая активность</p>
+      <p className="text-sm font-semibold text-foreground">{editing ? "Редактировать" : "Новая активность"}</p>
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название (теннис на корте)" className={inputCls} />
       <select value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
         {INTEREST_TAGS.map((t) => <option key={t.slug} value={t.slug}>{t.emoji} {t.label}</option>)}
@@ -71,8 +91,8 @@ export function ActivityForm({ onClose }: { onClose: () => void }) {
       {error && <p className="text-center text-xs text-danger">{error}</p>}
       <div className="flex gap-2">
         <button onClick={onClose} className="flex-1 rounded-xl border border-border bg-card py-3 text-sm font-semibold text-muted">Отмена</button>
-        <button onClick={submit} disabled={pending} className="flex-1 rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground disabled:opacity-50">
-          {pending ? "Создаю…" : "Создать"}
+        <button onClick={submit} disabled={pending} className="flex-1 rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground transition active:scale-[0.99] disabled:opacity-50">
+          {pending ? "Сохраняю…" : editing ? "Сохранить" : "Создать"}
         </button>
       </div>
     </div>

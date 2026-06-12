@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 
 import { requireCurrentUser } from "@/lib/auth";
 import { toUtcDateFromLocalParts } from "@/lib/datetime";
-import { insertEvent, deleteEventById } from "@/lib/events/queries";
+import { insertEvent, deleteEventById, updateEventById } from "@/lib/events/queries";
 import { notifyUser } from "@/lib/telegram/notify";
 import { canJoin } from "./state";
 import {
-  createActivity, getActivity, cancelActivity,
+  createActivity, getActivity, cancelActivity, updateActivity,
   participantRows, insertParticipant, removeParticipant, joinActivityAtomic,
 } from "./queries";
 import { isBlockedEitherWay, insertBlock, insertReport } from "@/lib/safety/queries";
@@ -41,6 +41,40 @@ export async function createActivityAction(input: {
   revalidatePath("/activities");
   revalidatePath("/calendar");
   return { ok: true, id: activityId };
+}
+
+export async function updateActivityAction(activityId: string, input: {
+  title: string; type: string; description?: string; place?: string;
+  lat?: number | null; lng?: number | null;
+  date: string; startTime: string; endTime: string; capacity?: number | null; visibility?: Visibility;
+}): Promise<{ ok: boolean }> {
+  const user = await requireCurrentUser();
+  const activity = await getActivity(activityId);
+  if (!activity || activity.host_id !== user.id) return { ok: false };
+  if (!input.title.trim() || !input.type || !input.date || !input.startTime || !input.endTime) return { ok: false };
+  const starts_at = toUtcDateFromLocalParts(input.date, input.startTime, user.timezone).toISOString();
+  const ends_at = toUtcDateFromLocalParts(input.date, input.endTime, user.timezone).toISOString();
+  if (ends_at <= starts_at) return { ok: false };
+  const lat = typeof input.lat === "number" && Number.isFinite(input.lat) ? input.lat : null;
+  const lng = typeof input.lng === "number" && Number.isFinite(input.lng) ? input.lng : null;
+  const title = input.title.trim();
+  const place = input.place?.trim() || null;
+
+  await updateActivity(activityId, {
+    title, type: input.type, description: input.description?.trim() || null, place, lat, lng,
+    starts_at, ends_at, capacity: input.capacity ?? null, visibility: input.visibility ?? activity.visibility,
+  });
+
+  // Keep every participant's materialized calendar event in sync, and tell them.
+  const rows = await participantRows(activityId);
+  for (const r of rows) {
+    if (r.event_id) await updateEventById(r.user_id, r.event_id, { title, starts_at, ends_at, location: place });
+    if (r.user_id !== user.id) await notifyUser(r.user_id, `✏️ Активность «${title}» изменена`);
+  }
+  revalidatePath("/activities");
+  revalidatePath(`/activities/${activityId}`);
+  revalidatePath("/calendar");
+  return { ok: true };
 }
 
 export async function joinActivityAction(activityId: string): Promise<{ ok: boolean; reason?: string }> {

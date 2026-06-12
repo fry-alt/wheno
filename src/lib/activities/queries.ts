@@ -59,6 +59,15 @@ export async function cancelActivity(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function updateActivity(
+  id: string,
+  fields: Partial<Omit<Activity, "id" | "host_id" | "status" | "created_at">>,
+): Promise<void> {
+  const admin = getAdminSupabase();
+  const { error } = await admin.from("activities").update(fields).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function participantRows(activityId: string): Promise<{ user_id: string; event_id: string | null }[]> {
   const admin = getAdminSupabase();
   const { data, error } = await admin.from("activity_participants").select("user_id, event_id").eq("activity_id", activityId);

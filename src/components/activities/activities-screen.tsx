@@ -11,7 +11,8 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Segmented } from "@/components/ui/segmented";
 import { haptic } from "@/lib/haptics";
 import { ACTIVITY_CATEGORIES, categoryColor, matchesCategories, type CategoryKey } from "@/lib/activities/category";
-import type { ActivityCardData } from "@/lib/activities/types";
+import { withinRadius, type LatLng } from "@/lib/activities/geo";
+import type { Activity, ActivityCardData } from "@/lib/activities/types";
 import type { ActivityMatch } from "@/lib/activities/match";
 
 const ActivityMap = dynamic(() => import("./activity-map").then((m) => m.ActivityMap), {
@@ -29,13 +30,30 @@ export function ActivitiesScreen({
   const [view, setView] = useState<"list" | "map">("list");
   const [cats, setCats] = useState<CategoryKey[]>([]);
   const [creating, setCreating] = useState(false);
+  const [near, setNear] = useState<LatLng | null>(null); // active "near me" centre
 
-  const list = (tab === "feed" ? feed : mine).filter((d) => matchesCategories(d.activity.type, cats));
-  const recs = recommended.filter((m) => matchesCategories(m.data.activity.type, cats));
+  const RADIUS_KM = 5;
+  function nearOk(a: Activity): boolean {
+    if (!near) return true;
+    return a.lat != null && a.lng != null && withinRadius(near, { lat: a.lat, lng: a.lng }, RADIUS_KM);
+  }
+
+  const list = (tab === "feed" ? feed : mine).filter((d) => matchesCategories(d.activity.type, cats) && nearOk(d.activity));
+  const recs = recommended.filter((m) => matchesCategories(m.data.activity.type, cats) && nearOk(m.data.activity));
 
   function toggleCat(key: CategoryKey) {
     haptic.selection();
     setCats((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
+
+  function toggleNear() {
+    if (near) { setNear(null); return; }
+    haptic.selection();
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setNear({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => { /* permission denied — stay off */ },
+      { enableHighAccuracy: false, timeout: 8000 },
+    );
   }
 
   return (
@@ -62,6 +80,15 @@ export function ActivitiesScreen({
 
       {tab === "feed" && (
         <div className="hide-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
+          <button
+            onClick={toggleNear}
+            className={clsx(
+              "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition active:scale-95",
+              near ? "border-accent bg-accent-soft text-accent" : "border-border text-muted",
+            )}
+          >
+            📍 Рядом
+          </button>
           {ACTIVITY_CATEGORIES.map((c) => {
             const active = cats.includes(c.key);
             return (
@@ -117,7 +144,7 @@ export function ActivitiesScreen({
 
       {creating && (
         <BottomSheet onClose={() => setCreating(false)}>
-          <ActivityForm onClose={() => setCreating(false)} />
+          <ActivityForm timezone={timezone} onClose={() => setCreating(false)} />
         </BottomSheet>
       )}
     </div>

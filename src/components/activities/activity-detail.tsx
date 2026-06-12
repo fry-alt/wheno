@@ -2,14 +2,23 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { formatInTimeZone } from "date-fns-tz";
 import { ru } from "date-fns/locale";
 
 import { ParticipantList } from "./participant-list";
+import { ActivityForm } from "./activity-form";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { haptic } from "@/lib/haptics";
 import { interestLabel } from "@/lib/profile/interests";
+import { categoryColor, categoryForType } from "@/lib/activities/category";
 import { joinActivityAction, leaveActivityAction, cancelActivityAction, reportActivityAction, blockUserAction } from "@/lib/activities/actions";
 import type { Activity, ActivityButtonState, ParticipantView } from "@/lib/activities/types";
+
+const LocationMap = dynamic(() => import("./location-map").then((m) => m.LocationMap), {
+  ssr: false,
+  loading: () => <div className="skeleton h-44 w-full rounded-2xl" />,
+});
 
 const REASON: Record<string, string> = { full: "Мест нет", past: "Уже прошло", cancelled: "Отменена", missing: "Не найдено", blocked: "Недоступно" };
 
@@ -21,6 +30,7 @@ export function ActivityDetail({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const when = formatInTimeZone(activity.starts_at, timezone, "EEEE d MMMM, HH:mm", { locale: ru });
 
   function act(fn: () => Promise<unknown>) { start(async () => { await fn(); router.refresh(); }); }
@@ -34,6 +44,10 @@ export function ActivityDetail({
       </div>
       {activity.description && <p className="text-sm text-foreground">{activity.description}</p>}
 
+      {activity.lat != null && activity.lng != null && (
+        <LocationMap lat={activity.lat} lng={activity.lng} color={categoryColor(categoryForType(activity.type))} />
+      )}
+
       <section className="flex flex-col gap-2">
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Участники · {participants.length}{activity.capacity != null ? `/${activity.capacity}` : ""}</p>
         <ParticipantList participants={participants} />
@@ -44,6 +58,7 @@ export function ActivityDetail({
       {state === "full" && <p className="rounded-xl border border-border bg-card py-3 text-center text-sm text-muted">Мест нет</p>}
       {state === "past" && <p className="rounded-xl border border-border bg-card py-3 text-center text-sm text-muted">Уже прошло</p>}
       {state === "cancelled" && <p className="rounded-xl border border-border bg-card py-3 text-center text-sm text-danger">Отменена</p>}
+      {isHost && state !== "cancelled" && <button onClick={() => { haptic.impact(); setEditOpen(true); }} disabled={pending} className="rounded-xl border border-border bg-card py-3 text-sm font-semibold text-foreground transition active:scale-[0.99]">Редактировать</button>}
       {isHost && state !== "cancelled" && <button onClick={() => act(() => cancelActivityAction(activity.id))} disabled={pending} className="rounded-xl border border-danger/40 py-3 text-sm font-semibold text-danger">Отменить активность</button>}
 
       {!isHost && (
@@ -53,6 +68,12 @@ export function ActivityDetail({
         </div>
       )}
       {msg && <p className="text-center text-xs text-muted">{msg}</p>}
+
+      {editOpen && (
+        <BottomSheet onClose={() => setEditOpen(false)}>
+          <ActivityForm timezone={timezone} editing={activity} onClose={() => setEditOpen(false)} />
+        </BottomSheet>
+      )}
     </div>
   );
 }
