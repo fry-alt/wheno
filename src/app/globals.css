@@ -121,3 +121,12 @@ select {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ─── Utilities ──────────────────────────────────────────────────────────── */
+.hide-scrollbar {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* legacy Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;                  /* WebKit */
+}

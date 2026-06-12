@@ -5,13 +5,16 @@ import { clsx } from "clsx";
 
 import { ActivityCard } from "./activity-card";
 import { ActivityForm } from "./activity-form";
+import { RecommendedRow } from "./recommended-row";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import type { ActivityCardData } from "@/lib/activities/types";
+import type { ActivityMatch } from "@/lib/activities/match";
 
 export function ActivitiesScreen({
-  feed, mine, timezone,
+  feed, mine, recommended, interests, timezone,
 }: {
-  feed: ActivityCardData[]; mine: ActivityCardData[]; timezone: string;
+  feed: ActivityCardData[]; mine: ActivityCardData[];
+  recommended: ActivityMatch[]; interests: string[]; timezone: string;
 }) {
   const [tab, setTab] = useState<"feed" | "mine">("feed");
   const [creating, setCreating] = useState(false);
@@ -27,6 +30,10 @@ export function ActivitiesScreen({
           </button>
         ))}
       </div>
+
+      {tab === "feed" && (
+        <RecommendedRow recommended={recommended} interests={interests} timezone={timezone} />
+      )}
 
       {list.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border px-4 py-10 text-center">
