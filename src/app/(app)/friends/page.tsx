@@ -3,6 +3,7 @@ import { SessionBootstrap } from "@/components/session-bootstrap";
 import { getCurrentUser } from "@/lib/auth";
 import { listFriends, listIncomingRequests, ensureInviteCodeForUser } from "@/lib/friends/queries";
 import { listIncomingMeetings, listAwaitingPick } from "@/lib/meetings/queries";
+import { getPeopleMatches } from "@/lib/people/queries";
 import { getUiPreferences } from "@/lib/preferences";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +21,13 @@ export default async function FriendsPage() {
     );
   }
 
-  const [friends, requests, myCode, incomingMeetings, awaitingPicks] = await Promise.all([
+  const [friends, requests, myCode, incomingMeetings, awaitingPicks, people] = await Promise.all([
     listFriends(user.id),
     listIncomingRequests(user.id),
     ensureInviteCodeForUser(user.id),
     listIncomingMeetings(user.id),
     listAwaitingPick(user.id),
+    getPeopleMatches(user.id),
   ]);
 
   return (
@@ -35,6 +37,7 @@ export default async function FriendsPage() {
       myCode={myCode}
       incomingMeetings={incomingMeetings}
       awaitingPicks={awaitingPicks}
+      people={people}
       timezone={user.timezone ?? "Europe/Amsterdam"}
     />
   );

@@ -13,7 +13,9 @@ import { getInitials } from "@/lib/utils";
 import type { FriendSummary, IncomingRequest } from "@/lib/friends/types";
 import Link from "next/link";
 import { MeetingsSection } from "@/components/friends/meetings-section";
+import { PeopleMatches } from "@/components/friends/people-matches";
 import type { AwaitingPick, IncomingMeeting } from "@/lib/meetings/types";
+import type { PeopleMatch } from "@/lib/people/match";
 
 const REASON_TEXT: Record<string, string> = {
   empty: "Введи код",
@@ -37,6 +39,7 @@ export function FriendsScreen({
   myCode,
   incomingMeetings,
   awaitingPicks,
+  people,
   timezone,
 }: {
   friends: FriendSummary[];
@@ -44,6 +47,7 @@ export function FriendsScreen({
   myCode: string;
   incomingMeetings: IncomingMeeting[];
   awaitingPicks: AwaitingPick[];
+  people: { matches: PeopleMatch[]; hasInterests: boolean };
   timezone: string;
 }) {
   const router = useRouter();
@@ -128,6 +132,8 @@ export function FriendsScreen({
       </section>
 
       <MeetingsSection incoming={incomingMeetings} awaiting={awaitingPicks} timezone={timezone} />
+
+      <PeopleMatches matches={people.matches} hasInterests={people.hasInterests} />
 
       {requests.length > 0 && (
         <section className="mb-6">
