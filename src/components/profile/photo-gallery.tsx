@@ -12,6 +12,7 @@ const UPLOAD_ERROR: Record<string, string> = {
   not_image: "Нужно изображение",
   limit: `Максимум ${PHOTO_LIMIT} фото`,
   empty: "Пустой файл",
+  failed: "Не удалось загрузить — попробуй ещё",
 };
 
 export function PhotoGallery({ photos }: { photos: ProfilePhotoView[] }) {
@@ -28,12 +29,16 @@ export function PhotoGallery({ photos }: { photos: ProfilePhotoView[] }) {
     const fd = new FormData();
     fd.append("photo", file);
     start(async () => {
-      const res = await uploadProfilePhotoAction(fd);
-      if (!res.ok) {
-        setError(UPLOAD_ERROR[res.reason ?? ""] ?? "Не удалось загрузить");
-        return;
+      try {
+        const res = await uploadProfilePhotoAction(fd);
+        if (!res.ok) {
+          setError(UPLOAD_ERROR[res.reason ?? ""] ?? "Не удалось загрузить");
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("Не удалось загрузить — попробуй ещё");
       }
-      router.refresh();
     });
   }
 

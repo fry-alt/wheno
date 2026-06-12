@@ -34,15 +34,23 @@ export async function uploadProfilePhotoAction(formData: FormData): Promise<{ ok
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return { ok: false, reason: "empty" };
   if (file.size > 5 * 1024 * 1024) return { ok: false, reason: "too_large" };
-  if (!file.type.startsWith("image/")) return { ok: false, reason: "not_image" };
-  const count = await countPhotos(user.id);
-  if (!canAddPhoto(count)) return { ok: false, reason: "limit" };
+  // Some mobile / Telegram pickers send an empty MIME type for valid images —
+  // only reject when a non-image type is explicitly present.
+  if (file.type && !file.type.startsWith("image/")) return { ok: false, reason: "not_image" };
 
-  const ext = (file.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
-  const path = await uploadPhotoObject(user.id, ext, await file.arrayBuffer(), file.type || "image/jpeg");
-  await insertPhoto(user.id, path, count); // count == next position index
-  revalidatePath("/profile");
-  return { ok: true };
+  try {
+    const count = await countPhotos(user.id);
+    if (!canAddPhoto(count)) return { ok: false, reason: "limit" };
+    const contentType = file.type || "image/jpeg";
+    const ext = (contentType.split("/")[1] || "jpg").replace("jpeg", "jpg");
+    const path = await uploadPhotoObject(user.id, ext, await file.arrayBuffer(), contentType);
+    await insertPhoto(user.id, path, count); // count == next position index
+    revalidatePath("/profile");
+    return { ok: true };
+  } catch (e) {
+    console.error("photo upload failed:", e);
+    return { ok: false, reason: "failed" };
+  }
 }
 
 export async function deleteProfilePhotoAction(photoId: string): Promise<void> {
