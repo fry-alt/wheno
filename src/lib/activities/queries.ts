@@ -100,16 +100,6 @@ async function buildCards(
   const hostIds = [...new Set(visible.map((a) => a.host_id))];
 
   const admin = getAdminSupabase();
-  const { data: parts, error } = await admin.from("activity_participants").select("activity_id, user_id").in("activity_id", ids);
-  if (error) throw new Error(error.message);
-  const countByActivity = new Map<string, number>();
-  const mine = new Set<string>();
-  for (const p of (parts ?? []) as { activity_id: string; user_id: string }[]) {
-    countByActivity.set(p.activity_id, (countByActivity.get(p.activity_id) ?? 0) + 1);
-    if (p.user_id === userId) mine.add(p.activity_id);
-  }
-
-  const hosts = await fetchUsers(hostIds);
   const starts = visible.map((a) => a.starts_at).sort();
   const ends = visible.map((a) => a.ends_at).sort();
   // Expand recurring events too (raw `events` rows miss recurring occurrences),
@@ -117,7 +107,20 @@ async function buildCards(
   // but overlapping an activity still counts as busy.
   const fetchStart = new Date(new Date(starts[0]).getTime() - DAY_MS);
   const fetchEnd = new Date(ends[ends.length - 1]);
-  const myEvents = await getEventsInRange(userId, fetchStart, fetchEnd, timezone);
+
+  // These three reads are independent — run them in one round trip.
+  const [partsRes, hosts, myEvents] = await Promise.all([
+    admin.from("activity_participants").select("activity_id, user_id").in("activity_id", ids),
+    fetchUsers(hostIds),
+    getEventsInRange(userId, fetchStart, fetchEnd, timezone),
+  ]);
+  if (partsRes.error) throw new Error(partsRes.error.message);
+  const countByActivity = new Map<string, number>();
+  const mine = new Set<string>();
+  for (const p of (partsRes.data ?? []) as { activity_id: string; user_id: string }[]) {
+    countByActivity.set(p.activity_id, (countByActivity.get(p.activity_id) ?? 0) + 1);
+    if (p.user_id === userId) mine.add(p.activity_id);
+  }
 
   return visible.map((a) => ({
     activity: a,
@@ -136,20 +139,22 @@ export async function getFeed(userId: string, nowIso: string, timezone: string):
     .gte("starts_at", nowIso).eq("status", "open").order("starts_at", { ascending: true });
   if (error) throw new Error(error.message);
   const all = (data ?? []) as Activity[];
-  const friends = await friendIds(userId);
-  const blocked = await blockedUserIds(userId);
+  const [friends, blocked] = await Promise.all([friendIds(userId), blockedUserIds(userId)]);
   const reachable = all.filter((a) => a.visibility === "public" || a.host_id === userId || friends.has(a.host_id));
   return buildCards(userId, reachable, blocked, timezone);
 }
 
 export async function getMine(userId: string, nowIso: string, timezone: string): Promise<ActivityCardData[]> {
   const admin = getAdminSupabase();
-  const { data: hosted, error: e1 } = await admin.from("activities").select(COLS)
-    .eq("host_id", userId).gte("starts_at", nowIso).order("starts_at", { ascending: true });
-  if (e1) throw new Error(e1.message);
-  const { data: pRows, error: e2 } = await admin.from("activity_participants").select("activity_id").eq("user_id", userId);
-  if (e2) throw new Error(e2.message);
-  const joinedIds = [...new Set(((pRows ?? []) as { activity_id: string }[]).map((r) => r.activity_id))];
+  const [hostedRes, pRowsRes] = await Promise.all([
+    admin.from("activities").select(COLS)
+      .eq("host_id", userId).gte("starts_at", nowIso).order("starts_at", { ascending: true }),
+    admin.from("activity_participants").select("activity_id").eq("user_id", userId),
+  ]);
+  if (hostedRes.error) throw new Error(hostedRes.error.message);
+  if (pRowsRes.error) throw new Error(pRowsRes.error.message);
+  const hosted = hostedRes.data;
+  const joinedIds = [...new Set(((pRowsRes.data ?? []) as { activity_id: string }[]).map((r) => r.activity_id))];
   let joined: Activity[] = [];
   if (joinedIds.length > 0) {
     const { data, error } = await admin.from("activities").select(COLS).in("id", joinedIds).gte("starts_at", nowIso);
