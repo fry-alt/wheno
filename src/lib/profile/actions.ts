@@ -34,11 +34,13 @@ export async function uploadProfilePhotoAction(formData: FormData): Promise<{ ok
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return { ok: false, reason: "empty" };
   if (file.size > 5 * 1024 * 1024) return { ok: false, reason: "too_large" };
-  if (!canAddPhoto(await countPhotos(user.id))) return { ok: false, reason: "limit" };
+  if (!file.type.startsWith("image/")) return { ok: false, reason: "not_image" };
+  const count = await countPhotos(user.id);
+  if (!canAddPhoto(count)) return { ok: false, reason: "limit" };
 
   const ext = (file.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
   const path = await uploadPhotoObject(user.id, ext, await file.arrayBuffer(), file.type || "image/jpeg");
-  await insertPhoto(user.id, path, await countPhotos(user.id));
+  await insertPhoto(user.id, path, count); // count == next position index
   revalidatePath("/profile");
   return { ok: true };
 }

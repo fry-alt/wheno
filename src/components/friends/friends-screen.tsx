@@ -78,8 +78,8 @@ export function FriendsScreen({
   }
 
   return (
-    <div className="px-4 pt-5">
-      <h1 className="mb-4 text-2xl font-bold text-white">Друзья</h1>
+    <div className="px-4 pt-5 animate-[fadeRise_300ms_ease-out]">
+      <h1 className="mb-4 text-2xl font-bold text-foreground">Друзья</h1>
 
       <section className="mb-5 rounded-2xl bg-[#1a1a1a] px-4 py-3">
         <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#555]">Твой код</p>

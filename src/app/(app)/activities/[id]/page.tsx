@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { ActivityDetail } from "@/components/activities/activity-detail";
 import { getCurrentUser } from "@/lib/auth";
-import { getActivity, participantRows, participantViews } from "@/lib/activities/queries";
+import { getActivity, participantViews } from "@/lib/activities/queries";
 import { activityButtonState } from "@/lib/activities/state";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +14,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const activity = await getActivity(id);
   if (!activity) notFound();
 
-  const [rows, participants] = await Promise.all([participantRows(id), participantViews(id)]);
+  const participants = await participantViews(id);
   const isHost = activity.host_id === user.id;
   const state = activityButtonState({
     isHost,
-    isParticipant: rows.some((r) => r.user_id === user.id),
-    count: rows.length,
+    isParticipant: participants.some((p) => p.user_id === user.id),
+    count: participants.length,
     capacity: activity.capacity,
     status: activity.status,
     startsAt: activity.starts_at,

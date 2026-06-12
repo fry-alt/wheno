@@ -16,7 +16,7 @@ export function ActivityCard({ data, timezone }: { data: ActivityCardData; timez
     <Link href={`/activities/${a.id}`} className="block rounded-2xl border border-border bg-card px-4 py-3 transition active:scale-[0.99]">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold text-foreground">{interestLabel(a.type)}</span>
-        {data.isFree && <span className="rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success">✓ свободен</span>}
+        {data.isFree && <span className="animate-[popIn_320ms_ease-out] rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success">✓ свободен</span>}
       </div>
       <p className="mt-0.5 text-sm font-bold text-foreground">{a.title}</p>
       <p className="text-xs text-muted tabular-nums">{when}{a.place ? ` · ${a.place}` : ""}</p>

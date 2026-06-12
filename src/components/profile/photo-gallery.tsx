@@ -1,28 +1,44 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { PHOTO_LIMIT } from "@/lib/profile/profile";
 import { deleteProfilePhotoAction, setMainPhotoAction, uploadProfilePhotoAction } from "@/lib/profile/actions";
 import type { ProfilePhotoView } from "@/lib/profile/types";
 
+const UPLOAD_ERROR: Record<string, string> = {
+  too_large: "Файл больше 5 МБ",
+  not_image: "Нужно изображение",
+  limit: `Максимум ${PHOTO_LIMIT} фото`,
+  empty: "Пустой файл",
+};
+
 export function PhotoGallery({ photos }: { photos: ProfilePhotoView[] }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
-  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setError(null);
     const fd = new FormData();
     fd.append("photo", file);
-    await uploadProfilePhotoAction(fd);
-    start(() => router.refresh());
+    start(async () => {
+      const res = await uploadProfilePhotoAction(fd);
+      if (!res.ok) {
+        setError(UPLOAD_ERROR[res.reason ?? ""] ?? "Не удалось загрузить");
+        return;
+      }
+      router.refresh();
+    });
   }
 
   return (
+    <div className="flex flex-col gap-2">
     <div className="flex flex-wrap gap-2">
       {photos.map((p) => (
         <div key={p.id} className="relative">
@@ -56,6 +72,8 @@ export function PhotoGallery({ photos }: { photos: ProfilePhotoView[] }) {
         </button>
       )}
       <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
+    </div>
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }
