@@ -16,11 +16,11 @@ export default function GlobalError({
   return (
     <html lang="ru">
       <body>
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#0f0f0f] p-8 text-center text-white">
-          <p className="text-sm text-[#999]">Что-то пошло не так.</p>
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-8 text-center text-foreground">
+          <p className="text-sm text-muted">Что-то пошло не так.</p>
           <button
             onClick={reset}
-            className="rounded-xl bg-white px-5 py-2 text-sm font-semibold text-black"
+            className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground"
           >
             Попробовать снова
           </button>

@@ -117,7 +117,7 @@ export function CaptureSheet({
               <input value={text} onChange={(e) => setText(e.target.value)} placeholder="завтра зал в 7, перенеси созвон на 15, удали ужин в чт" className={`${inputCls} flex-1`} />
               <button onClick={toggleRecording} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-border bg-card text-lg" aria-label="Голос">{recording ? "⏹️" : "🎤"}</button>
             </div>
-            {error && <p className="text-center text-xs text-red-400">{error}</p>}
+            {error && <p className="text-center text-xs text-danger">{error}</p>}
             <button onClick={() => runPlan(text)} disabled={pending || !text.trim()} className="rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground disabled:opacity-50">
               {pending ? "Думаю…" : "Разобрать"}
             </button>

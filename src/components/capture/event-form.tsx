@@ -120,7 +120,7 @@ export function EventForm({
     }
   }
 
-  const inputCls = "w-full rounded-xl bg-[#1a1a1a] px-4 py-3 text-sm text-white placeholder-[#555] outline-none";
+  const inputCls = "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder-muted outline-none";
   const canDelete = Boolean(editing) || Boolean(recurringEdit);
   const freqOptions: { v: Freq; label: string }[] = [
     { v: "none", label: "Нет" }, { v: "daily", label: "Каждый день" }, { v: "weekly", label: "По дням недели" },
@@ -131,10 +131,10 @@ export function EventForm({
     <div className="flex flex-col gap-3">
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название" className={inputCls} />
 
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto hide-scrollbar">
         {CATEGORIES.map((c) => (
-          <button key={c} onClick={() => pickCategory(c)} className="flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold"
-            style={{ background: category === c ? "#fff" : "#1a1a1a", color: category === c ? "#000" : "#888" }}>
+          <button key={c} onClick={() => pickCategory(c)}
+            className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${category === c ? "bg-accent text-accent-foreground" : "bg-card text-muted"}`}>
             {CATEGORY_EMOJI[c]} {CATEGORY_LABEL_RU[c]}
           </button>
         ))}
@@ -146,18 +146,18 @@ export function EventForm({
         <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={`${inputCls} flex-1`} />
       </div>
 
-      <button onClick={() => setIsFixed((v) => !v)} className="flex items-center justify-between rounded-xl bg-[#1a1a1a] px-4 py-3 text-sm text-white">
+      <button onClick={() => setIsFixed((v) => !v)} className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground">
         <span>{isFixed ? "Фиксированное" : "Гибкое"}</span>
-        <span className="text-xs text-[#777]">{isFixed ? "нельзя двигать" : "ИИ может подвинуть"}</span>
+        <span className="text-xs text-muted">{isFixed ? "нельзя двигать" : "ИИ может подвинуть"}</span>
       </button>
 
       {showRecurrence && (
-        <div className="flex flex-col gap-2 rounded-xl bg-[#1a1a1a] p-3">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <span className="flex-shrink-0 text-xs text-[#777]">Повторять</span>
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+            <span className="flex-shrink-0 text-xs text-muted">Повторять</span>
             {freqOptions.map((o) => (
-              <button key={o.v} onClick={() => setFreq(o.v)} className="flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
-                style={{ background: freq === o.v ? "#fff" : "#111", color: freq === o.v ? "#000" : "#888" }}>
+              <button key={o.v} onClick={() => setFreq(o.v)}
+                className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition ${freq === o.v ? "bg-accent text-accent-foreground" : "bg-card-muted text-muted"}`}>
                 {o.label}
               </button>
             ))}
@@ -165,18 +165,18 @@ export function EventForm({
           {freq === "weekly" && (
             <div className="flex gap-1">
               {WEEKDAYS.map((w) => (
-                <button key={w.n} onClick={() => toggleWeekday(w.n)} className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold"
-                  style={{ background: weekdays.includes(w.n) ? "#fff" : "#111", color: weekdays.includes(w.n) ? "#000" : "#888" }}>
+                <button key={w.n} onClick={() => toggleWeekday(w.n)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition ${weekdays.includes(w.n) ? "bg-accent text-accent-foreground" : "bg-card-muted text-muted"}`}>
                   {w.label}
                 </button>
               ))}
             </div>
           )}
           {freq !== "none" && (
-            <div className="flex items-center gap-2 text-xs text-[#777]">
+            <div className="flex items-center gap-2 text-xs text-muted">
               <span>До</span>
-              <input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="rounded-lg bg-[#111] px-2 py-1 text-white outline-none" />
-              {until && <button onClick={() => setUntil("")} className="text-[#555]">сбросить</button>}
+              <input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="rounded-lg border border-border bg-card-muted px-2 py-1 text-foreground outline-none" />
+              {until && <button onClick={() => setUntil("")} className="text-muted underline">сбросить</button>}
             </div>
           )}
         </div>
@@ -184,13 +184,13 @@ export function EventForm({
 
       <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Примечание" rows={2} className={inputCls} />
 
-      {error && <p className="text-center text-xs text-red-400">{error}</p>}
+      {error && <p className="text-center text-xs text-danger">{error}</p>}
 
-      <button onClick={submit} disabled={pending} className="rounded-xl bg-white py-3 text-sm font-semibold text-black disabled:opacity-50">
+      <button onClick={submit} disabled={pending} className="rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground transition active:scale-[0.99] disabled:opacity-50">
         {pending ? "Сохраняю…" : editing || recurringEdit ? "Сохранить" : "Добавить"}
       </button>
       {canDelete && (
-        <button onClick={remove} disabled={pending} className="rounded-xl bg-[#1a1a1a] py-3 text-sm font-semibold text-red-400 disabled:opacity-50">
+        <button onClick={remove} disabled={pending} className="rounded-xl border border-border bg-card py-3 text-sm font-semibold text-danger disabled:opacity-50">
           Удалить
         </button>
       )}

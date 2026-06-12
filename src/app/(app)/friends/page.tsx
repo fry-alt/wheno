@@ -14,7 +14,7 @@ export default async function FriendsPage() {
   if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-        <span className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#3b82f6] text-xl font-bold text-white">w</span>
+        <span className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-accent text-xl font-bold text-accent-foreground">w</span>
         <SessionBootstrap language={language} />
       </div>
     );

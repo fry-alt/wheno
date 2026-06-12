@@ -91,14 +91,14 @@ export function AdvisorSheet({
     }
   }
 
-  const inputCls = "w-full rounded-xl bg-[#1a1a1a] px-4 py-3 text-sm text-white placeholder-[#555] outline-none";
+  const inputCls = "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder-muted outline-none";
   const selectedCount = selected.size;
 
   return (
     <BottomSheet onClose={onClose}>
         <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm font-semibold text-white">✨ Найти время</span>
-          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2a2a2a] text-xs text-[#999]">✕</button>
+          <span className="text-sm font-semibold text-foreground">✨ Найти время</span>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-card-strong text-xs text-muted">✕</button>
         </div>
 
         <input
@@ -108,21 +108,21 @@ export function AdvisorSheet({
           className={`${inputCls} mb-3`}
         />
 
-        <div className="mb-3 flex items-center gap-2 text-xs text-[#999]">
+        <div className="mb-3 flex items-center gap-2 text-xs text-muted">
           <span>Активен</span>
-          <input type="time" value={start} onChange={(e) => saveHours(e.target.value, end)} className="rounded-lg bg-[#1a1a1a] px-2 py-1 text-white outline-none" />
+          <input type="time" value={start} onChange={(e) => saveHours(e.target.value, end)} className="rounded-lg border border-border bg-card px-2 py-1 text-foreground outline-none" />
           <span>–</span>
-          <input type="time" value={end} onChange={(e) => saveHours(start, e.target.value)} className="rounded-lg bg-[#1a1a1a] px-2 py-1 text-white outline-none" />
+          <input type="time" value={end} onChange={(e) => saveHours(start, e.target.value)} className="rounded-lg border border-border bg-card px-2 py-1 text-foreground outline-none" />
         </div>
 
-        <button onClick={find} disabled={pending || !text.trim()} className="mb-4 w-full rounded-xl bg-white py-3 text-sm font-semibold text-black disabled:opacity-50">
+        <button onClick={find} disabled={pending || !text.trim()} className="mb-4 w-full rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground transition active:scale-[0.99] disabled:opacity-50">
           {pending ? "Ищу…" : "Найти"}
         </button>
 
-        {error && <p className="mb-2 text-center text-xs text-red-400">{error}</p>}
+        {error && <p className="mb-2 text-center text-xs text-danger">{error}</p>}
 
         {result && result.slots.length === 0 && (
-          <p className="text-center text-xs text-[#777]">Свободных окон не нашёл — попробуй другой день или часы.</p>
+          <p className="text-center text-xs text-muted">Свободных окон не нашёл — попробуй другой день или часы.</p>
         )}
 
         {result && result.slots.length > 0 && (
@@ -139,19 +139,18 @@ export function AdvisorSheet({
                 <button
                   key={slot.starts_at}
                   onClick={() => toggle(i)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-3 text-left"
-                  style={{ background: on ? "#1a1a1a" : "#141414", opacity: on ? 1 : 0.5 }}
+                  className={`flex items-center gap-3 rounded-xl border border-border px-3 py-3 text-left transition ${on ? "bg-card" : "bg-card-muted opacity-50"}`}
                 >
                   <span className="text-base">{on ? "☑" : "☐"}</span>
                   <span className="text-lg">{categoryEmoji(result.request.category)}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-white">{result.request.title}</span>
-                    <span className="block text-xs text-[#777]">{day} · {s}–{e}</span>
+                    <span className="block truncate text-sm font-semibold text-foreground">{result.request.title}</span>
+                    <span className="block text-xs text-muted">{day} · {s}–{e}</span>
                   </span>
                 </button>
               );
             })}
-            <button onClick={addPlan} disabled={adding || selectedCount === 0} className="mt-2 w-full rounded-xl bg-white py-3 text-sm font-semibold text-black disabled:opacity-50">
+            <button onClick={addPlan} disabled={adding || selectedCount === 0} className="mt-2 w-full rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground transition active:scale-[0.99] disabled:opacity-50">
               {adding ? "Добавляю…" : `Добавить план (${selectedCount})`}
             </button>
           </div>

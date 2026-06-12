@@ -2,55 +2,49 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* ─── Telegram CSS variables (provided by WebApp) with fallbacks ─────────── */
-:root {
-  --tg-bg:           var(--tg-theme-bg-color, #ffffff);
-  --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #f0f0f5);
-  --tg-text:         var(--tg-theme-text-color, #000000);
-  --tg-hint:         var(--tg-theme-hint-color, #8e8e93);
-  --tg-link:         var(--tg-theme-link-color, #2481cc);
-  --tg-button:       var(--tg-theme-button-color, #2481cc);
-  --tg-button-text:  var(--tg-theme-button-text-color, #ffffff);
-  --tg-accent:       var(--tg-theme-accent-text-color, #2481cc);
-  --tg-section-bg:   var(--tg-theme-section-bg-color, #ffffff);
-  --tg-subtitle:     var(--tg-theme-subtitle-text-color, #8e8e93);
-  --tg-destructive:  var(--tg-theme-destructive-text-color, #ff3b30);
-  --tg-header-bg:    var(--tg-theme-header_bg_color, var(--tg-bg));
-
-  /* ─── Internal tokens (mapped from Telegram) ─── */
-  --background:        var(--tg-secondary-bg);
-  --foreground:        var(--tg-text);
-  --card:              var(--tg-section-bg);
-  --card-muted:        color-mix(in srgb, var(--tg-secondary-bg) 100%, transparent);
-  --card-strong:       color-mix(in srgb, var(--tg-section-bg) 100%, #ffffff 6%);
-  --muted:             var(--tg-subtitle);
-  --text-faint:        color-mix(in srgb, var(--tg-subtitle) 60%, transparent);
-  --border:            color-mix(in srgb, #ffffff 8%, transparent);
-  --accent:            var(--tg-button);
-  --accent-foreground: var(--tg-button-text);
-  --accent-soft:       color-mix(in srgb, var(--tg-button) 14%, transparent);
-  --danger:            var(--tg-destructive);
-  --danger-soft:       color-mix(in srgb, var(--tg-destructive) 12%, transparent);
-  --success:           #34c759;
-  --success-soft:      color-mix(in srgb, #34c759 14%, transparent);
-  --glow-start:        color-mix(in srgb, var(--tg-button) 18%, transparent);
-  --accent-glow:       color-mix(in srgb, var(--tg-button) 35%, transparent);
+/* ─── Brand palette — one designed look, independent of the user's Telegram
+   theme (so colours stay consistent and tunable). Light is the default. ──── */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background:        #eef0f5;
+  --foreground:        #15161b;
+  --card:              #ffffff;
+  --card-strong:       #ffffff;
+  --card-muted:        #e3e5ec;
+  --muted:             #6a6c77;
+  --text-faint:        #a2a4af;
+  --border:            rgba(17, 18, 24, 0.10);
+  --accent:            #4f6ef5;
+  --accent-foreground: #ffffff;
+  --accent-soft:       rgba(79, 110, 245, 0.12);
+  --danger:            #e5484d;
+  --danger-soft:       rgba(229, 72, 77, 0.12);
+  --success:           #1f9d52;
+  --success-soft:      rgba(31, 157, 82, 0.14);
+  --glow-start:        rgba(79, 110, 245, 0.16);
+  --accent-glow:       rgba(79, 110, 245, 0.28);
 }
 
-/* ─── Explicit dark fallbacks for when running outside Telegram ─────────── */
 :root[data-theme="dark"] {
-  --tg-bg:           #0c0c0e;
-  --tg-secondary-bg: #161618;
-  --tg-text:         #f5f5f7;
-  --tg-hint:         #8a8a92;
-  --tg-link:         #5b7cfa;
-  --tg-button:       #5b7cfa;
-  --tg-button-text:  #ffffff;
-  --tg-accent:       #5b7cfa;
-  --tg-section-bg:   #161618;
-  --tg-subtitle:     #8a8a92;
-  --tg-destructive:  #ff453a;
-  --tg-header-bg:    #0c0c0e;
+  color-scheme: dark;
+  --background:        #0e0e13;
+  --foreground:        #f4f4f7;
+  --card:              #17171d;
+  --card-strong:       #22222c;
+  --card-muted:        #1b1b22;
+  --muted:             #9a9aa6;
+  --text-faint:        rgba(154, 154, 166, 0.55);
+  --border:            rgba(255, 255, 255, 0.09);
+  --accent:            #5b7cfa;
+  --accent-foreground: #ffffff;
+  --accent-soft:       rgba(91, 124, 250, 0.16);
+  --danger:            #ff5a52;
+  --danger-soft:       rgba(255, 90, 82, 0.14);
+  --success:           #34c759;
+  --success-soft:      rgba(52, 199, 89, 0.16);
+  --glow-start:        rgba(91, 124, 250, 0.20);
+  --accent-glow:       rgba(91, 124, 250, 0.34);
 }
 
 @theme inline {
@@ -108,12 +102,18 @@ select {
   font: inherit;
 }
 
-/* Mobile WebKit renders date/time inputs at an intrinsic width that can overflow
-   a narrow container — clamp them to their box. */
+/* Mobile WebKit renders native date/time inputs at an intrinsic size that ignores
+   width utilities and overflows — reset appearance so they obey their box and
+   match sibling inputs. color-scheme (set per theme) keeps the picker readable. */
 input[type="date"],
 input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
   min-width: 0;
   max-width: 100%;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
 }
 
 /* ─── Motion ─────────────────────────────────────────────────────────────── */

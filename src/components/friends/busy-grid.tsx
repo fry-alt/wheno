@@ -35,13 +35,13 @@ export function BusyGrid({
         const blocks = (byDay.get(d.date) ?? []).sort((a, b) => a.from.localeCompare(b.from));
         return (
           <div key={d.date} className="flex items-start gap-3">
-            <span className="w-12 shrink-0 pt-0.5 text-xs font-semibold uppercase text-[#555]">{d.label}</span>
+            <span className="w-12 shrink-0 pt-0.5 text-xs font-semibold uppercase text-muted">{d.label}</span>
             {blocks.length === 0 ? (
-              <span className="text-xs text-[#3a9f6a]">свободен весь день</span>
+              <span className="text-xs text-success">свободен весь день</span>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {blocks.map((b, i) => (
-                  <span key={i} className="rounded-md bg-[#2a2a2a] px-2 py-0.5 text-xs text-[#999]">
+                  <span key={i} className="rounded-md bg-card-strong px-2 py-0.5 text-xs text-muted">
                     {b.from}–{b.to}
                   </span>
                 ))}

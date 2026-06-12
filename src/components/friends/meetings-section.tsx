@@ -77,38 +77,38 @@ export function MeetingsSection({
 
   return (
     <section className="mb-6">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#555]">Встречи</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Встречи</p>
       <div className="space-y-2">
         {incoming.map((m) => (
-          <div key={m.proposal_id} className="rounded-xl bg-[#1a1a1a] px-3 py-2.5">
-            <p className="text-sm text-white">{m.from_name}: «{m.title}»</p>
-            <p className="mb-2 text-xs text-[#555]">{m.duration_min} мин · {m.window_from} – {m.window_to}</p>
+          <div key={m.proposal_id} className="rounded-xl bg-card px-3 py-2.5">
+            <p className="text-sm text-foreground">{m.from_name}: «{m.title}»</p>
+            <p className="mb-2 text-xs text-muted">{m.duration_min} мин · {m.window_from} – {m.window_to}</p>
             <div className="flex gap-2">
-              <button disabled={pending} onClick={() => act(() => acceptMeeting(m.proposal_id))} className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black disabled:opacity-50">Принять</button>
-              <button disabled={pending} onClick={() => act(() => declineMeeting(m.proposal_id))} className="rounded-lg bg-[#2a2a2a] px-3 py-1.5 text-xs text-[#999] disabled:opacity-50">Отклонить</button>
+              <button disabled={pending} onClick={() => act(() => acceptMeeting(m.proposal_id))} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground disabled:opacity-50">Принять</button>
+              <button disabled={pending} onClick={() => act(() => declineMeeting(m.proposal_id))} className="rounded-lg bg-card-strong px-3 py-1.5 text-xs text-muted disabled:opacity-50">Отклонить</button>
             </div>
           </div>
         ))}
 
         {awaiting.map((m) => (
-          <div key={m.proposal_id} className="rounded-xl bg-[#1a1a1a] px-3 py-2.5">
-            <p className="text-sm text-white">«{m.title}» с {m.to_name}</p>
-            <p className="mb-2 text-xs text-[#3a9f6a]">принято — выбери время</p>
+          <div key={m.proposal_id} className="rounded-xl bg-card px-3 py-2.5">
+            <p className="text-sm text-foreground">«{m.title}» с {m.to_name}</p>
+            <p className="mb-2 text-xs text-success">принято — выбери время</p>
             {slotsFor === m.proposal_id ? (
               <div className="space-y-1.5">
                 {slots.map((s) => (
-                  <button key={s.starts_at} disabled={pending} onClick={() => pick(m.proposal_id, s)} className="block w-full rounded-lg bg-[#2a2a2a] px-3 py-2 text-left text-xs text-white disabled:opacity-50">
+                  <button key={s.starts_at} disabled={pending} onClick={() => pick(m.proposal_id, s)} className="block w-full rounded-lg bg-card-strong px-3 py-2 text-left text-xs text-foreground disabled:opacity-50">
                     {fmt(s, timezone)}
                   </button>
                 ))}
               </div>
             ) : (
-              <button disabled={pending} onClick={() => loadSlots(m.proposal_id)} className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black disabled:opacity-50">Выбрать время</button>
+              <button disabled={pending} onClick={() => loadSlots(m.proposal_id)} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground disabled:opacity-50">Выбрать время</button>
             )}
           </div>
         ))}
       </div>
-      {msg && <p className="mt-2 text-xs text-[#999]">{msg}</p>}
+      {msg && <p className="mt-2 text-xs text-muted">{msg}</p>}
     </section>
   );
 }

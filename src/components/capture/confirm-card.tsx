@@ -50,20 +50,20 @@ export function ConfirmCard({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-xl bg-[#1a1a1a] p-4">
-        <p className="text-base font-semibold text-white">{categoryEmoji(parsed.category)} {parsed.title}</p>
-        <p className="mt-1 text-sm text-[#999]">{day}, {start}–{end} · {parsed.is_fixed ? "фиксированное" : "гибкое"}</p>
+      <div className="rounded-xl border border-border bg-card p-4">
+        <p className="text-base font-semibold text-foreground">{categoryEmoji(parsed.category)} {parsed.title}</p>
+        <p className="mt-1 text-sm text-muted">{day}, {start}–{end} · {parsed.is_fixed ? "фиксированное" : "гибкое"}</p>
         {parsed.recurrence && (
-          <p className="mt-1 text-xs text-[#3b82f6]">🔁 {recurrenceLabel(parsed.recurrence)}</p>
+          <p className="mt-1 text-xs text-accent">🔁 {recurrenceLabel(parsed.recurrence)}</p>
         )}
       </div>
-      {error && <p className="text-center text-xs text-red-400">{error}</p>}
+      {error && <p className="text-center text-xs text-danger">{error}</p>}
       <div className="flex gap-2">
-        <button onClick={confirm} disabled={pending} className="flex-1 rounded-xl bg-white py-3 text-sm font-semibold text-black disabled:opacity-50">
+        <button onClick={confirm} disabled={pending} className="flex-1 rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground transition active:scale-[0.99] disabled:opacity-50">
           {pending ? "…" : "✅ Добавить"}
         </button>
-        <button onClick={onEdit} className="rounded-xl bg-[#1a1a1a] px-4 py-3 text-sm text-white">✏️</button>
-        <button onClick={onCancel} className="rounded-xl bg-[#1a1a1a] px-4 py-3 text-sm text-[#999]">✕</button>
+        <button onClick={onEdit} className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground">✏️</button>
+        <button onClick={onCancel} className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted">✕</button>
       </div>
     </div>
   );
