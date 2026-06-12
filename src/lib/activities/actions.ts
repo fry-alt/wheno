@@ -16,6 +16,7 @@ import type { Visibility } from "./types";
 
 export async function createActivityAction(input: {
   title: string; type: string; description?: string; place?: string;
+  lat?: number | null; lng?: number | null;
   date: string; startTime: string; endTime: string; capacity?: number | null; visibility?: Visibility;
 }): Promise<{ ok: boolean; id?: string }> {
   const user = await requireCurrentUser();
@@ -23,10 +24,13 @@ export async function createActivityAction(input: {
   const starts_at = toUtcDateFromLocalParts(input.date, input.startTime, user.timezone).toISOString();
   const ends_at = toUtcDateFromLocalParts(input.date, input.endTime, user.timezone).toISOString();
   if (ends_at <= starts_at) return { ok: false };
+  const lat = typeof input.lat === "number" && Number.isFinite(input.lat) ? input.lat : null;
+  const lng = typeof input.lng === "number" && Number.isFinite(input.lng) ? input.lng : null;
 
   const activityId = await createActivity({
     host_id: user.id, title: input.title.trim(), type: input.type,
     description: input.description?.trim() || null, place: input.place?.trim() || null,
+    lat, lng,
     starts_at, ends_at, capacity: input.capacity ?? null, visibility: input.visibility ?? "public",
   });
   const eventId = await insertEvent({

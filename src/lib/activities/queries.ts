@@ -6,7 +6,7 @@ import type { Activity, ActivityCardData, ParticipantView } from "./types";
 
 const DAY_MS = 86_400_000;
 
-const COLS = "id, host_id, title, type, description, place, starts_at, ends_at, capacity, visibility, status, created_at";
+const COLS = "id, host_id, title, type, description, place, lat, lng, starts_at, ends_at, capacity, visibility, status, created_at";
 
 function displayName(u: { first_name: string | null; last_name: string | null; username: string | null }): string {
   return [u.first_name, u.last_name].filter(Boolean).join(" ") || u.username || "—";

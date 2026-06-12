@@ -9,6 +9,8 @@ export interface Activity {
   type: string;          // interest slug or custom
   description: string | null;
   place: string | null;
+  lat: number | null;    // map pin latitude
+  lng: number | null;    // map pin longitude
   starts_at: string;     // ISO
   ends_at: string;       // ISO
   capacity: number | null;

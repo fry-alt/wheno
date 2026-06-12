@@ -2,10 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 
 import { INTEREST_TAGS } from "@/lib/profile/interests";
 import { createActivityAction } from "@/lib/activities/actions";
 import type { Visibility } from "@/lib/activities/types";
+import type { LatLng } from "./location-picker";
+
+const LocationPicker = dynamic(() => import("./location-picker").then((m) => m.LocationPicker), {
+  ssr: false,
+  loading: () => <div className="skeleton h-56 w-full rounded-xl" />,
+});
 
 export function ActivityForm({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -13,6 +20,7 @@ export function ActivityForm({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [type, setType] = useState("running");
   const [place, setPlace] = useState("");
+  const [loc, setLoc] = useState<LatLng | null>(null);
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("10:00");
@@ -28,6 +36,7 @@ export function ActivityForm({ onClose }: { onClose: () => void }) {
     start(async () => {
       const res = await createActivityAction({
         title, type, place, description, date, startTime, endTime,
+        lat: loc?.lat ?? null, lng: loc?.lng ?? null,
         capacity: capacity ? Number(capacity) : null, visibility,
       });
       if (!res.ok || !res.id) { setError("Не получилось"); return; }
@@ -42,7 +51,8 @@ export function ActivityForm({ onClose }: { onClose: () => void }) {
       <select value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
         {INTEREST_TAGS.map((t) => <option key={t.slug} value={t.slug}>{t.emoji} {t.label}</option>)}
       </select>
-      <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Место" className={inputCls} />
+      <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Место (адрес или название)" className={inputCls} />
+      <LocationPicker value={loc} onChange={setLoc} />
       <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Описание (необязательно)" rows={2} className={inputCls} />
       <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
       <div className="flex gap-2">
