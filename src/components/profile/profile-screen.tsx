@@ -42,7 +42,7 @@ export function ProfileScreen({ profile, displayName }: { profile: ProfileWithPh
   }
 
   return (
-    <div className="flex flex-col gap-6 px-4 pt-5 pb-8">
+    <div className="flex flex-col gap-6 px-4 pt-5 pb-8 animate-[fadeRise_300ms_ease-out]">
       <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
 
       <section className="flex flex-col gap-2">

@@ -25,7 +25,7 @@ export function ActivitiesScreen({
       <div className="mb-4 flex gap-2">
         {(["feed", "mine"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={clsx("rounded-full px-4 py-1.5 text-sm font-semibold transition", tab === t ? "bg-card-strong text-foreground" : "text-muted")}>
+            className={clsx("rounded-full px-4 py-1.5 text-sm font-semibold transition active:scale-95", tab === t ? "bg-card-strong text-foreground" : "text-muted")}>
             {t === "feed" ? "Лента" : "Мои"}
           </button>
         ))}
@@ -41,8 +41,16 @@ export function ActivitiesScreen({
           <p className="mt-1 text-xs text-muted">Создай первую — нажми ➕</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {list.map((d) => <ActivityCard key={d.activity.id} data={d} timezone={timezone} />)}
+        <div key={tab} className="flex flex-col gap-2">
+          {list.map((d, i) => (
+            <div
+              key={d.activity.id}
+              className="animate-[fadeRise_220ms_ease-out] [animation-fill-mode:backwards]"
+              style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}
+            >
+              <ActivityCard data={d} timezone={timezone} />
+            </div>
+          ))}
         </div>
       )}
 

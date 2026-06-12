@@ -23,14 +23,14 @@ export default async function NotesPage() {
   const [tasks, dayNotes] = await Promise.all([getTasks(user.id), getDayNotes(user.id)]);
 
   return (
-    <div className="px-4 pt-5">
-      <h1 className="mb-4 text-2xl font-bold text-white">Заметки</h1>
+    <div className="px-4 pt-5 animate-[fadeRise_300ms_ease-out]">
+      <h1 className="mb-4 text-2xl font-bold text-foreground">Заметки</h1>
       <section className="mb-6">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#555]">Задачи</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Задачи</p>
         <TaskList tasks={tasks} />
       </section>
       <section>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#555]">На день</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">На день</p>
         <DayNotes notes={dayNotes} />
       </section>
     </div>
