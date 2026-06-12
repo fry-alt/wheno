@@ -134,6 +134,8 @@ create table if not exists public.activities (
   type        text not null,
   description text,
   place       text,
+  lat         double precision,
+  lng         double precision,
   starts_at   timestamptz not null,
   ends_at     timestamptz not null,
   capacity    int,
@@ -142,6 +144,9 @@ create table if not exists public.activities (
   created_at  timestamptz not null default now(),
   constraint activities_time_order check (ends_at > starts_at)
 );
+-- Map coordinates (cycle 4) — idempotent for existing deployments.
+alter table public.activities add column if not exists lat double precision;
+alter table public.activities add column if not exists lng double precision;
 create index if not exists activities_starts_idx on public.activities(starts_at);
 alter table public.activities enable row level security;
 
