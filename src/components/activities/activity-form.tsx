@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 import { INTEREST_TAGS } from "@/lib/profile/interests";
+import { haptic } from "@/lib/haptics";
 import { createActivityAction } from "@/lib/activities/actions";
 import type { Visibility } from "@/lib/activities/types";
 import type { LatLng } from "./location-picker";
@@ -39,7 +40,8 @@ export function ActivityForm({ onClose }: { onClose: () => void }) {
         lat: loc?.lat ?? null, lng: loc?.lng ?? null,
         capacity: capacity ? Number(capacity) : null, visibility,
       });
-      if (!res.ok || !res.id) { setError("Не получилось"); return; }
+      if (!res.ok || !res.id) { haptic.error(); setError("Не получилось"); return; }
+      haptic.success();
       router.push(`/activities/${res.id}`);
     });
   }

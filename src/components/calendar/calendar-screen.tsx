@@ -13,6 +13,7 @@ import { ViewSwitcher } from "./view-switcher";
 import { ScopeDialog } from "./scope-dialog";
 import { CaptureSheet } from "@/components/capture/capture-sheet";
 import { AdvisorSheet } from "@/components/advisor/advisor-sheet";
+import { haptic } from "@/lib/haptics";
 import type { CalendarView } from "@/lib/calendar/views";
 import type { EventInstance } from "@/lib/events/types";
 import type { Note } from "@/lib/notes/types";
@@ -152,8 +153,8 @@ export function CalendarScreen({
         )}
       </div>
 
-      <button onClick={() => setAdvisorOpen(true)} className="fixed bottom-44 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-card-strong text-2xl shadow-lg transition active:scale-95" aria-label="Найти время">✨</button>
-      <button onClick={() => { setEditing(null); setRecurringEdit(null); setSheetOpen(true); }} className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-bold text-accent-foreground shadow-lg transition active:scale-95" aria-label="Добавить">+</button>
+      <button onClick={() => { haptic.impact(); setAdvisorOpen(true); }} className="fixed bottom-44 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-card-strong text-2xl shadow-lg transition active:scale-95" aria-label="Найти время">✨</button>
+      <button onClick={() => { haptic.impact(); setEditing(null); setRecurringEdit(null); setSheetOpen(true); }} className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-bold text-accent-foreground shadow-lg transition active:scale-95" aria-label="Добавить">+</button>
 
       {sheetOpen && (
         <CaptureSheet timezone={timezone} defaultDate={selectedDate || todayStr} editing={editing} recurringEdit={recurringEdit} onClose={closeSheet} />

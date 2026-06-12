@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Segmented } from "@/components/ui/segmented";
 import { SectionLabel } from "@/components/ui/section-label";
+import { haptic } from "@/lib/haptics";
 import { updatePreferences } from "@/app/(app)/settings/actions";
 import type { LanguagePref, ThemePref } from "@/lib/preferences-shared";
 
@@ -33,6 +34,7 @@ export function SettingsScreen({
   const [language, setLanguage] = useState<LanguagePref>(languagePref);
 
   function pickTheme(value: ThemePref) {
+    haptic.selection();
     setTheme(value);
     start(async () => {
       await updatePreferences({ theme: value });
@@ -41,6 +43,7 @@ export function SettingsScreen({
   }
 
   function pickLanguage(value: LanguagePref) {
+    haptic.selection();
     setLanguage(value);
     start(async () => {
       await updatePreferences({ language: value });

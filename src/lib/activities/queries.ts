@@ -78,6 +78,18 @@ export async function insertParticipant(activityId: string, userId: string, even
   if (error) throw new Error(error.message);
 }
 
+/** Atomic join under a row lock — returns 'ok' | 'missing' | 'cancelled' | 'full' | 'joined'. */
+export async function joinActivityAtomic(activityId: string, userId: string, eventId: string): Promise<string> {
+  const admin = getAdminSupabase();
+  const { data, error } = await admin.rpc("join_activity", {
+    p_activity: activityId,
+    p_user: userId,
+    p_event: eventId,
+  });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
 export async function removeParticipant(activityId: string, userId: string): Promise<string | null> {
   const admin = getAdminSupabase();
   const { data, error } = await admin.from("activity_participants").select("event_id").eq("activity_id", activityId).eq("user_id", userId).maybeSingle();

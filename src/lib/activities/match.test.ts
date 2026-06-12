@@ -14,6 +14,8 @@ function card(over: Partial<ActivityCardData> & { id: string; type?: string; sta
       type: over.type ?? "running",
       description: null,
       place: over.activity?.place ?? null,
+      lat: null,
+      lng: null,
       starts_at,
       ends_at: "2026-06-13T11:00:00Z",
       capacity: over.activity?.capacity ?? 6,

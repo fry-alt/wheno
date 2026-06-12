@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 
+import { haptic } from "@/lib/haptics";
+
 const TABS = [
   { href: "/calendar", emoji: "📅", label: "Календарь" },
   { href: "/friends", emoji: "👥", label: "Друзья" },
@@ -21,6 +23,7 @@ export function BottomNav() {
           <Link
             key={href}
             href={href}
+            onClick={() => { if (!active) haptic.selection(); }}
             aria-current={active ? "page" : undefined}
             className={clsx(
               "relative flex flex-col items-center gap-0.5 text-[10px] transition-colors duration-200 active:scale-95",

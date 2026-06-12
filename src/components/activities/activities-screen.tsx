@@ -9,6 +9,7 @@ import { ActivityForm } from "./activity-form";
 import { RecommendedRow } from "./recommended-row";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Segmented } from "@/components/ui/segmented";
+import { haptic } from "@/lib/haptics";
 import { ACTIVITY_CATEGORIES, categoryColor, matchesCategories, type CategoryKey } from "@/lib/activities/category";
 import type { ActivityCardData } from "@/lib/activities/types";
 import type { ActivityMatch } from "@/lib/activities/match";
@@ -33,6 +34,7 @@ export function ActivitiesScreen({
   const recs = recommended.filter((m) => matchesCategories(m.data.activity.type, cats));
 
   function toggleCat(key: CategoryKey) {
+    haptic.selection();
     setCats((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
@@ -43,7 +45,7 @@ export function ActivitiesScreen({
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex gap-2">
           {(["feed", "mine"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
+            <button key={t} onClick={() => { haptic.selection(); setTab(t); }}
               className={clsx("rounded-full px-4 py-1.5 text-sm font-semibold transition active:scale-95", tab === t ? "bg-card-strong text-foreground" : "text-muted")}>
               {t === "feed" ? "Лента" : "Мои"}
             </button>
@@ -111,7 +113,7 @@ export function ActivitiesScreen({
         </>
       )}
 
-      <button onClick={() => setCreating(true)} className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-bold text-accent-foreground shadow-lg transition active:scale-95" aria-label="Создать">＋</button>
+      <button onClick={() => { haptic.impact(); setCreating(true); }} className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-bold text-accent-foreground shadow-lg transition active:scale-95" aria-label="Создать">＋</button>
 
       {creating && (
         <BottomSheet onClose={() => setCreating(false)}>

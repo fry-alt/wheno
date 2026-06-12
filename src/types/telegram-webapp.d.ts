@@ -14,6 +14,11 @@ declare global {
         expand?: () => void;
         disableVerticalSwipes?: () => void;
         isVerticalSwipesEnabled?: boolean;
+        HapticFeedback?: {
+          impactOccurred?: (style: "light" | "medium" | "heavy" | "rigid" | "soft") => void;
+          notificationOccurred?: (type: "error" | "success" | "warning") => void;
+          selectionChanged?: () => void;
+        };
       };
     };
   }

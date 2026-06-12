@@ -177,3 +177,65 @@ create table if not exists public.activity_reports (
   created_at  timestamptz not null default now()
 );
 alter table public.activity_reports enable row level security;
+
+-- ── Hardening (cycle: pre-launch) ────────────────────────────────────────────
+
+-- Per-user sliding-window rate limit for AI endpoints (protects OpenAI spend).
+create table if not exists public.ai_rate_limit (
+  user_id      uuid primary key references public.users(id) on delete cascade,
+  window_start timestamptz not null default now(),
+  count        int not null default 0
+);
+alter table public.ai_rate_limit enable row level security;
+
+-- Returns true if the call is allowed (and records it), false if over the limit.
+create or replace function public.check_rate_limit(p_user uuid, p_limit int, p_window_seconds int)
+returns boolean
+language plpgsql
+as $$
+declare
+  v_start timestamptz;
+  v_count int;
+begin
+  insert into public.ai_rate_limit(user_id) values (p_user)
+    on conflict (user_id) do nothing;
+  select window_start, count into v_start, v_count
+    from public.ai_rate_limit where user_id = p_user for update;
+  if now() - v_start > make_interval(secs => p_window_seconds) then
+    update public.ai_rate_limit set window_start = now(), count = 1 where user_id = p_user;
+    return true;
+  end if;
+  if v_count >= p_limit then
+    return false;
+  end if;
+  update public.ai_rate_limit set count = count + 1 where user_id = p_user;
+  return true;
+end;
+$$;
+
+-- Atomic join: locks the activity row so concurrent joins can't exceed capacity.
+-- Returns 'ok' | 'missing' | 'cancelled' | 'full' | 'joined'.
+create or replace function public.join_activity(p_activity uuid, p_user uuid, p_event uuid)
+returns text
+language plpgsql
+as $$
+declare
+  v_cap int;
+  v_status text;
+  v_count int;
+begin
+  select capacity, status into v_cap, v_status
+    from public.activities where id = p_activity for update;
+  if not found then return 'missing'; end if;
+  if v_status <> 'open' then return 'cancelled'; end if;
+  select count(*) into v_count from public.activity_participants where activity_id = p_activity;
+  if v_cap is not null and v_count >= v_cap then return 'full'; end if;
+  begin
+    insert into public.activity_participants(activity_id, user_id, event_id)
+      values (p_activity, p_user, p_event);
+  exception when unique_violation then
+    return 'joined';
+  end;
+  return 'ok';
+end;
+$$;

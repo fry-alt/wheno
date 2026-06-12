@@ -9,7 +9,7 @@ import { notifyUser } from "@/lib/telegram/notify";
 import { canJoin } from "./state";
 import {
   createActivity, getActivity, cancelActivity,
-  participantRows, insertParticipant, removeParticipant,
+  participantRows, insertParticipant, removeParticipant, joinActivityAtomic,
 } from "./queries";
 import { isBlockedEitherWay, insertBlock, insertReport } from "@/lib/safety/queries";
 import type { Visibility } from "./types";
@@ -57,11 +57,18 @@ export async function joinActivityAction(activityId: string): Promise<{ ok: bool
   });
   if (!check.ok) return { ok: false, reason: check.reason };
 
+  // Create the calendar event, then join atomically (capacity is re-checked under
+  // a row lock). If the atomic join rejects — e.g. the last seat was taken in a
+  // race — roll the event back so we never leave an orphan.
   const eventId = await insertEvent({
     user_id: user.id, title: activity.title, starts_at: activity.starts_at, ends_at: activity.ends_at,
     category: "social", is_fixed: true, notes: null, location: activity.place,
   });
-  await insertParticipant(activityId, user.id, eventId);
+  const result = await joinActivityAtomic(activityId, user.id, eventId);
+  if (result !== "ok") {
+    await deleteEventById(user.id, eventId);
+    return { ok: false, reason: result };
+  }
   await notifyUser(activity.host_id, `🤸 Кто-то идёт на «${activity.title}»`);
   revalidatePath("/activities");
   revalidatePath(`/activities/${activityId}`);

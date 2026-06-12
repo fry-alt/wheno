@@ -6,6 +6,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { ru } from "date-fns/locale";
 
 import { ParticipantList } from "./participant-list";
+import { haptic } from "@/lib/haptics";
 import { interestLabel } from "@/lib/profile/interests";
 import { joinActivityAction, leaveActivityAction, cancelActivityAction, reportActivityAction, blockUserAction } from "@/lib/activities/actions";
 import type { Activity, ActivityButtonState, ParticipantView } from "@/lib/activities/types";
@@ -38,8 +39,8 @@ export function ActivityDetail({
         <ParticipantList participants={participants} />
       </section>
 
-      {state === "join" && <button onClick={() => act(async () => { const r = await joinActivityAction(activity.id); if (!r.ok) setMsg(REASON[r.reason ?? ""] ?? "Не получилось"); })} disabled={pending} className="rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground disabled:opacity-50">Иду</button>}
-      {state === "joined" && <button onClick={() => act(() => leaveActivityAction(activity.id))} disabled={pending} className="rounded-xl border border-border bg-card py-3 text-sm font-semibold text-foreground">Выйти</button>}
+      {state === "join" && <button onClick={() => act(async () => { const r = await joinActivityAction(activity.id); if (!r.ok) { haptic.error(); setMsg(REASON[r.reason ?? ""] ?? "Не получилось"); } else { haptic.success(); } })} disabled={pending} className="rounded-xl bg-accent py-3 text-sm font-semibold text-accent-foreground transition active:scale-[0.99] disabled:opacity-50">Иду</button>}
+      {state === "joined" && <button onClick={() => act(async () => { haptic.impact(); await leaveActivityAction(activity.id); })} disabled={pending} className="rounded-xl border border-border bg-card py-3 text-sm font-semibold text-foreground transition active:scale-[0.99]">Выйти</button>}
       {state === "full" && <p className="rounded-xl border border-border bg-card py-3 text-center text-sm text-muted">Мест нет</p>}
       {state === "past" && <p className="rounded-xl border border-border bg-card py-3 text-center text-sm text-muted">Уже прошло</p>}
       {state === "cancelled" && <p className="rounded-xl border border-border bg-card py-3 text-center text-sm text-danger">Отменена</p>}

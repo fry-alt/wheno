@@ -14,7 +14,16 @@ type UntypedSupabaseDatabase = {
       }
     >;
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      check_rate_limit: {
+        Args: { p_user: string; p_limit: number; p_window_seconds: number };
+        Returns: boolean;
+      };
+      join_activity: {
+        Args: { p_activity: string; p_user: string; p_event: string };
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
