@@ -26,8 +26,6 @@ export function PeopleMatches({ matches, hasInterests }: { matches: PeopleMatch[
       </section>
     );
   }
-  if (matches.length === 0) return null;
-
   function add(userId: string) {
     haptic.impact();
     start(async () => {
@@ -46,6 +44,12 @@ export function PeopleMatches({ matches, hasInterests }: { matches: PeopleMatch[
   return (
     <section className="mb-6">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Познакомься</p>
+      {matches.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card px-4 py-6 text-center">
+          <p className="text-sm font-semibold text-foreground">Пока никого похожего</p>
+          <p className="mt-0.5 text-xs text-muted">Появятся люди с общими интересами — заглядывай позже</p>
+        </div>
+      ) : (
       <div className="flex flex-col gap-2">
         {matches.map((m) => {
           const c = m.candidate;
@@ -75,6 +79,7 @@ export function PeopleMatches({ matches, hasInterests }: { matches: PeopleMatch[
           );
         })}
       </div>
+      )}
     </section>
   );
 }

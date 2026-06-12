@@ -1,0 +1,19 @@
+name: Event reminders
+
+# Knocks on the protected cron route so wheno can send "starting soon" pushes.
+# Needs a repo secret CRON_SECRET equal to the CRON_SECRET env var in Vercel.
+on:
+  schedule:
+    - cron: "*/10 * * * *" # every 10 minutes (UTC; GitHub may delay under load)
+  workflow_dispatch: {} # lets you run it manually from the Actions tab to test
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping reminders cron
+        run: |
+          curl -sS -X POST "https://wheno.vercel.app/api/cron/reminders" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -w "\nHTTP %{http_code}\n" \
+            --fail-with-body
