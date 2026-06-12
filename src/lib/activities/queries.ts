@@ -1,7 +1,10 @@
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { getEventsInRange } from "@/lib/events/queries";
 import { isFreeDuring } from "./state";
 import { blockedUserIds } from "@/lib/safety/queries";
 import type { Activity, ActivityCardData, ParticipantView } from "./types";
+
+const DAY_MS = 86_400_000;
 
 const COLS = "id, host_id, title, type, description, place, starts_at, ends_at, capacity, visibility, status, created_at";
 
@@ -85,16 +88,12 @@ export async function removeParticipant(activityId: string, userId: string): Pro
   return eventId;
 }
 
-async function userEventsInRange(userId: string, startIso: string, endIso: string): Promise<{ starts_at: string; ends_at: string }[]> {
-  const admin = getAdminSupabase();
-  const { data, error } = await admin
-    .from("events").select("starts_at, ends_at").eq("user_id", userId)
-    .lt("starts_at", endIso).gt("ends_at", startIso);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as { starts_at: string; ends_at: string }[];
-}
-
-async function buildCards(userId: string, activities: Activity[], blocked: Set<string>): Promise<ActivityCardData[]> {
+async function buildCards(
+  userId: string,
+  activities: Activity[],
+  blocked: Set<string>,
+  timezone: string,
+): Promise<ActivityCardData[]> {
   const visible = activities.filter((a) => !blocked.has(a.host_id));
   if (visible.length === 0) return [];
   const ids = visible.map((a) => a.id);
@@ -113,7 +112,12 @@ async function buildCards(userId: string, activities: Activity[], blocked: Set<s
   const hosts = await fetchUsers(hostIds);
   const starts = visible.map((a) => a.starts_at).sort();
   const ends = visible.map((a) => a.ends_at).sort();
-  const myEvents = await userEventsInRange(userId, starts[0], ends[ends.length - 1]);
+  // Expand recurring events too (raw `events` rows miss recurring occurrences),
+  // and widen the start a day back so an event beginning just before the window
+  // but overlapping an activity still counts as busy.
+  const fetchStart = new Date(new Date(starts[0]).getTime() - DAY_MS);
+  const fetchEnd = new Date(ends[ends.length - 1]);
+  const myEvents = await getEventsInRange(userId, fetchStart, fetchEnd, timezone);
 
   return visible.map((a) => ({
     activity: a,
@@ -126,7 +130,7 @@ async function buildCards(userId: string, activities: Activity[], blocked: Set<s
   }));
 }
 
-export async function getFeed(userId: string, nowIso: string): Promise<ActivityCardData[]> {
+export async function getFeed(userId: string, nowIso: string, timezone: string): Promise<ActivityCardData[]> {
   const admin = getAdminSupabase();
   const { data, error } = await admin.from("activities").select(COLS)
     .gte("starts_at", nowIso).eq("status", "open").order("starts_at", { ascending: true });
@@ -135,10 +139,10 @@ export async function getFeed(userId: string, nowIso: string): Promise<ActivityC
   const friends = await friendIds(userId);
   const blocked = await blockedUserIds(userId);
   const reachable = all.filter((a) => a.visibility === "public" || a.host_id === userId || friends.has(a.host_id));
-  return buildCards(userId, reachable, blocked);
+  return buildCards(userId, reachable, blocked, timezone);
 }
 
-export async function getMine(userId: string, nowIso: string): Promise<ActivityCardData[]> {
+export async function getMine(userId: string, nowIso: string, timezone: string): Promise<ActivityCardData[]> {
   const admin = getAdminSupabase();
   const { data: hosted, error: e1 } = await admin.from("activities").select(COLS)
     .eq("host_id", userId).gte("starts_at", nowIso).order("starts_at", { ascending: true });
@@ -155,5 +159,5 @@ export async function getMine(userId: string, nowIso: string): Promise<ActivityC
   const byId = new Map<string, Activity>();
   for (const a of [...((hosted ?? []) as Activity[]), ...joined]) byId.set(a.id, a);
   const merged = [...byId.values()].sort((x, y) => x.starts_at.localeCompare(y.starts_at));
-  return buildCards(userId, merged, new Set());
+  return buildCards(userId, merged, new Set(), timezone);
 }

@@ -13,8 +13,8 @@ export default async function ActivitiesPage() {
   if (!user) redirect("/");
   const now = new Date().toISOString();
   const [feed, mine, profile] = await Promise.all([
-    getFeed(user.id, now),
-    getMine(user.id, now),
+    getFeed(user.id, now, user.timezone),
+    getMine(user.id, now, user.timezone),
     getProfile(user.id),
   ]);
   const recommended = rankActivities(profile.interests, feed, now, { timezone: user.timezone });
