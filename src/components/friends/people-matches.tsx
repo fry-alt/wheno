@@ -55,21 +55,23 @@ export function PeopleMatches({ matches, hasInterests }: { matches: PeopleMatch[
           const c = m.candidate;
           return (
             <div key={c.user_id} className="flex items-center gap-3 rounded-xl bg-card px-3 py-2.5">
-              {c.photo_url ? (
-                <img src={c.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
-              ) : (
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-card-strong text-xs font-semibold text-foreground">{getInitials(c.name)}</span>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {c.name}{m.sameCity && c.city ? ` · ${c.city}` : ""}
-                </p>
-                <div className="mt-0.5 flex flex-wrap gap-1">
-                  {m.sharedInterests.slice(0, 3).map((i) => (
-                    <span key={i} className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">{interestLabel(i)}</span>
-                  ))}
+              <Link href={`/friends/${c.user_id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                {c.photo_url ? (
+                  <img src={c.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-card-strong text-xs font-semibold text-foreground">{getInitials(c.name)}</span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {c.name}{m.sameCity && c.city ? ` · ${c.city}` : ""}
+                  </p>
+                  <div className="mt-0.5 flex flex-wrap gap-1">
+                    {m.sharedInterests.slice(0, 3).map((i) => (
+                      <span key={i} className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent">{interestLabel(i)}</span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </Link>
               {done[c.user_id] ? (
                 <span className="shrink-0 text-xs text-muted">{done[c.user_id]}</span>
               ) : (

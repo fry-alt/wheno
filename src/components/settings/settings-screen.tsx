@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { Segmented } from "@/components/ui/segmented";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -24,9 +25,11 @@ const LANG_OPTIONS: { value: LanguagePref; label: string }[] = [
 export function SettingsScreen({
   themePref,
   languagePref,
+  isAdmin = false,
 }: {
   themePref: ThemePref;
   languagePref: LanguagePref;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [, start] = useTransition();
@@ -68,6 +71,12 @@ export function SettingsScreen({
           системные сообщения.
         </p>
       </section>
+
+      {isAdmin && (
+        <Link href="/admin" className="rounded-xl border border-border bg-card py-3 text-center text-sm font-semibold text-foreground transition active:scale-[0.99]">
+          📊 Админка
+        </Link>
+      )}
     </div>
   );
 }
