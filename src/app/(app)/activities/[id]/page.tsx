@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { ActivityDetail } from "@/components/activities/activity-detail";
+import { BackButton } from "@/components/back-button";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivity, participantViews } from "@/lib/activities/queries";
 import { activityButtonState } from "@/lib/activities/state";
@@ -26,5 +27,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     now: new Date().toISOString(),
   });
 
-  return <ActivityDetail activity={activity} participants={participants} state={state} isHost={isHost} timezone={user.timezone} />;
+  return (
+    <>
+      <BackButton href="/activities" />
+      <ActivityDetail activity={activity} participants={participants} state={state} isHost={isHost} timezone={user.timezone} />
+    </>
+  );
 }

@@ -19,6 +19,12 @@ declare global {
           notificationOccurred?: (type: "error" | "success" | "warning") => void;
           selectionChanged?: () => void;
         };
+        BackButton?: {
+          show?: () => void;
+          hide?: () => void;
+          onClick?: (cb: () => void) => void;
+          offClick?: (cb: () => void) => void;
+        };
       };
     };
   }

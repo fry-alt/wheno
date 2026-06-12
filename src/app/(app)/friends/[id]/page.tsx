@@ -5,6 +5,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { BusyGrid } from "@/components/friends/busy-grid";
 import { MeetingForm } from "@/components/friends/meeting-form";
 import { AddFriendButton } from "@/components/friends/add-friend-button";
+import { BackButton } from "@/components/back-button";
 import { ProfileView } from "@/components/profile/profile-view";
 import { getCurrentUser } from "@/lib/auth";
 import { getFriendBusy, findFriendshipBetween } from "@/lib/friends/queries";
@@ -36,6 +37,7 @@ export default async function FriendProfilePage({ params }: { params: Promise<{ 
 
   return (
     <div className="px-4 pt-5 pb-8 animate-[fadeRise_300ms_ease-out]">
+      <BackButton href="/friends" />
       <Link href="/friends" className="mb-4 inline-block text-sm text-muted">← Друзья</Link>
 
       <div className="mb-5 flex items-center gap-3">
