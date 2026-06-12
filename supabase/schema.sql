@@ -47,11 +47,16 @@ create table if not exists public.events (
   location   text,
   recurrence     jsonb,
   excluded_dates jsonb not null default '[]'::jsonb,
+  reminded_at    timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint events_time_order check (ends_at > starts_at)
 );
 create index if not exists events_user_starts_idx on public.events(user_id, starts_at);
+-- Reminders (cron): track which one-off events have been pinged.
+alter table public.events add column if not exists reminded_at timestamptz;
+create index if not exists events_reminder_idx on public.events(starts_at)
+  where reminded_at is null and recurrence is null;
 alter table public.events enable row level security;
 drop trigger if exists events_set_updated_at on public.events;
 create trigger events_set_updated_at before update on public.events
