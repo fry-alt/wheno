@@ -11,6 +11,7 @@ declare global {
             language_code?: string;
           };
         };
+        ready?: () => void;
         expand?: () => void;
         disableVerticalSwipes?: () => void;
         isVerticalSwipesEnabled?: boolean;

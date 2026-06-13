@@ -12,6 +12,7 @@ export function TelegramViewport() {
   useEffect(() => {
     const wa = window.Telegram?.WebApp;
     if (!wa) return;
+    wa.ready?.();
     wa.expand?.();
     wa.disableVerticalSwipes?.();
   }, []);

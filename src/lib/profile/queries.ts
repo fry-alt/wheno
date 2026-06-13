@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { publicProfileProjection } from "./profile";
 import type { Gender, Profile, ProfilePhoto, ProfilePhotoView, ProfileWithPhotos, PublicProfile } from "./types";
@@ -73,7 +75,7 @@ export async function insertPhoto(userId: string, storagePath: string, position:
 
 export async function uploadPhotoObject(userId: string, ext: string, bytes: ArrayBuffer, contentType: string): Promise<string> {
   const admin = getAdminSupabase();
-  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const path = `${userId}/${randomUUID()}.${ext}`;
   const { error } = await admin.storage.from(BUCKET).upload(path, bytes, { contentType, upsert: false });
   if (error) throw new Error(error.message);
   return path;
