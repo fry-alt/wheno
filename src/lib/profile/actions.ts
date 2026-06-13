@@ -33,7 +33,7 @@ export async function uploadProfilePhotoAction(formData: FormData): Promise<{ ok
   const user = await requireCurrentUser();
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return { ok: false, reason: "empty" };
-  if (file.size > 5 * 1024 * 1024) return { ok: false, reason: "too_large" };
+  if (file.size > 8 * 1024 * 1024) return { ok: false, reason: "too_large" };
   // Some mobile / Telegram pickers send an empty MIME type for valid images —
   // only reject when a non-image type is explicitly present.
   if (file.type && !file.type.startsWith("image/")) return { ok: false, reason: "not_image" };

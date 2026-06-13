@@ -8,12 +8,31 @@ import { deleteProfilePhotoAction, setMainPhotoAction, uploadProfilePhotoAction 
 import type { ProfilePhotoView } from "@/lib/profile/types";
 
 const UPLOAD_ERROR: Record<string, string> = {
-  too_large: "Файл больше 5 МБ",
+  too_large: "Файл больше 8 МБ",
   not_image: "Нужно изображение",
   limit: `Максимум ${PHOTO_LIMIT} фото`,
   empty: "Пустой файл",
   failed: "Не удалось загрузить — попробуй ещё",
 };
+
+// Downscale + re-encode to JPEG so big phone photos fit well under the upload
+// limit (and load fast). Throws on unsupported images so the caller can fall back.
+async function downscale(file: File, maxDim = 1280, quality = 0.82): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no canvas context");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+  return await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/jpeg", quality),
+  );
+}
 
 export function PhotoGallery({ photos }: { photos: ProfilePhotoView[] }) {
   const router = useRouter();
@@ -26,10 +45,16 @@ export function PhotoGallery({ photos }: { photos: ProfilePhotoView[] }) {
     e.target.value = "";
     if (!file) return;
     setError(null);
-    const fd = new FormData();
-    fd.append("photo", file);
     start(async () => {
       try {
+        let blob: Blob = file;
+        try {
+          blob = await downscale(file);
+        } catch {
+          // Unsupported image (e.g. some HEIC) — fall back to the original.
+        }
+        const fd = new FormData();
+        fd.append("photo", blob, "photo.jpg");
         const res = await uploadProfilePhotoAction(fd);
         if (!res.ok) {
           setError(UPLOAD_ERROR[res.reason ?? ""] ?? "Не удалось загрузить");
